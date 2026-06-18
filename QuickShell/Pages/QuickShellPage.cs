@@ -1,19 +1,19 @@
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
-using TerminalShortcuts.Commands;
-using TerminalShortcuts.Services;
+using QuickShell.Commands;
+using QuickShell.Services;
 
-namespace TerminalShortcuts.Pages;
+namespace QuickShell.Pages;
 
-internal sealed partial class TerminalShortcutsPage : DynamicListPage
+internal sealed partial class QuickShellPage : DynamicListPage
 {
     private IListItem[] _items = [];
     private string _query = string.Empty;
 
-    public TerminalShortcutsPage()
+    public QuickShellPage()
     {
         Icon = new IconInfo("\uE756");
-        Title = "Terminal Shortcuts";
+        Title = "Quick Shell";
         Name = "Open";
         PlaceholderText = "Search shortcuts by name, abbreviation, path, or command...";
         RefreshItems(string.Empty);

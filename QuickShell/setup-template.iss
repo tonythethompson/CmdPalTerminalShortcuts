@@ -1,9 +1,9 @@
-; Inno Setup script for Terminal Shortcuts (Command Palette extension)
+; Inno Setup script for Quick Shell (Command Palette extension)
 ; COM registration uses LocalServer32 for ExeServer (not InprocServer32).
 
 #define AppVersion "0.1.0.0"
-#define ExtensionName "TerminalShortcuts"
-#define DisplayName "Terminal Shortcuts"
+#define ExtensionName "QuickShell"
+#define DisplayName "Quick Shell"
 #define DeveloperName "Tony Thompson"
 
 [Setup]
@@ -11,7 +11,7 @@ AppId={{8C4E2F91-6B3D-4A5E-9F1C-2D7E8A0B4C6D}}
 AppName={#DisplayName}
 AppVersion={#AppVersion}
 AppPublisher={#DeveloperName}
-AppPublisherURL=https://github.com/tonythethompson/CmdPalTerminalShortcuts
+AppPublisherURL=https://github.com/tonythethompson/QuickShell
 DefaultDirName={autopf}\{#ExtensionName}
 OutputDir=bin\Release\installer
 OutputBaseFilename={#ExtensionName}-Setup-{#AppVersion}
@@ -31,8 +31,8 @@ Source: "bin\Release\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion 
 Name: "{group}\{#DisplayName}"; Filename: "{app}\{#ExtensionName}.exe"
 
 [Registry]
-Root: HKCU; Subkey: "SOFTWARE\Classes\CLSID\{{A3FFFE73-298E-4749-BE32-BFD576F0E3FF}}"; ValueType: string; ValueName: ""; ValueData: "{#ExtensionName}"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "SOFTWARE\Classes\CLSID\{{A3FFFE73-298E-4749-BE32-BFD576F0E3FF}}\LocalServer32"; ValueType: string; ValueName: ""; ValueData: """{app}\{#ExtensionName}.exe"" -RegisterProcessAsComServer"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "SOFTWARE\Classes\CLSID\{{528cc766-cbe8-4861-9933-722c7a3f3581}}"; ValueType: string; ValueName: ""; ValueData: "{#ExtensionName}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "SOFTWARE\Classes\CLSID\{{528cc766-cbe8-4861-9933-722c7a3f3581}}\LocalServer32"; ValueType: string; ValueName: ""; ValueData: """{app}\{#ExtensionName}.exe"" -RegisterProcessAsComServer"; Flags: uninsdeletekey
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"

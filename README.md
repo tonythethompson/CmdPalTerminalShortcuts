@@ -1,4 +1,4 @@
-# Terminal Shortcuts for Command Palette
+# Quick Shell for Command Palette
 
 A PowerToys Command Palette extension that opens saved directories in a terminal and optionally runs a command.
 
@@ -13,7 +13,7 @@ A PowerToys Command Palette extension that opens saved directories in a terminal
 
 On first run, the extension creates:
 
-`%LOCALAPPDATA%\TerminalShortcutsCmdPal\shortcuts.json`
+`%LOCALAPPDATA%\QuickShell\shortcuts.json`
 
 Example:
 
@@ -44,7 +44,7 @@ See `shortcuts.example.json` for more examples.
 ### WinGet (recommended)
 
 ```powershell
-winget install tonythethompson.TerminalShortcuts
+winget install tonythethompson.QuickShell
 ```
 
 After installing, run **Reload Command Palette Extension** in Command Palette.
@@ -60,26 +60,25 @@ Prerequisites:
 
 Steps:
 
-1. Open `TerminalShortcuts.sln` in Visual Studio
+1. Open `QuickShell.sln` in Visual Studio
 2. Set platform to `x64`
-3. Build → Deploy `TerminalShortcuts`
+3. Build → Deploy `QuickShell`
 4. In Command Palette, run `Reload Command Palette Extension`
-5. Search for `Terminal Shortcuts`
+5. Search for `Quick Shell`
 
 ## Usage
 
-- Search `Terminal Shortcuts` and pick a saved directory
+- Search `Quick Shell` and pick a saved directory
 - Or type an abbreviation like `api` at the root palette; matching shortcuts appear as fallback results
 - Use `Reload shortcuts` after editing `shortcuts.json`
 
 ## Project layout
 
-- `TerminalShortcuts/Models` — shortcut model
-- `TerminalShortcuts/Services` — config loading and terminal launch
-- `TerminalShortcuts/Pages` — searchable CmdPal page
-- `TerminalShortcuts/Commands` — invokable actions
+- `QuickShell/Models` — shortcut model
+- `QuickShell/Services` — config loading and terminal launch
+- `QuickShell/Pages` — searchable CmdPal page
+- `QuickShell/Commands` — invokable actions
 
 ## Notes
 
-- Update the `Publisher` identity in `Package.appxmanifest` before publishing
-- The COM class GUID is `A3FFFE73-298E-4749-BE32-BFD576F0E3FF`
+- The COM class GUID is `528cc766-cbe8-4861-9933-722c7a3f3581`

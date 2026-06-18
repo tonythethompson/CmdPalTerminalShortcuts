@@ -1,9 +1,9 @@
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
-using TerminalShortcuts.Models;
-using TerminalShortcuts.Services;
+using QuickShell.Models;
+using QuickShell.Services;
 
-namespace TerminalShortcuts.Commands;
+namespace QuickShell.Commands;
 
 internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
 {

@@ -1,4 +1,4 @@
-namespace TerminalShortcuts.Models;
+namespace QuickShell.Models;
 
 internal sealed class TerminalShortcut
 {

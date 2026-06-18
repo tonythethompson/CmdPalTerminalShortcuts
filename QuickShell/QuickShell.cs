@@ -3,15 +3,15 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.CommandPalette.Extensions;
 
-namespace TerminalShortcuts;
+namespace QuickShell;
 
-[Guid("A3FFFE73-298E-4749-BE32-BFD576F0E3FF")]
-public sealed partial class TerminalShortcutsExtension : IExtension, IDisposable
+[Guid("528cc766-cbe8-4861-9933-722c7a3f3581")]
+public sealed partial class QuickShellExtension : IExtension, IDisposable
 {
     private readonly ManualResetEvent _extensionDisposedEvent;
-    private readonly TerminalShortcutsCommandsProvider _provider = new();
+    private readonly QuickShellCommandsProvider _provider = new();
 
-    public TerminalShortcutsExtension(ManualResetEvent extensionDisposedEvent)
+    public QuickShellExtension(ManualResetEvent extensionDisposedEvent)
     {
         _extensionDisposedEvent = extensionDisposedEvent;
     }

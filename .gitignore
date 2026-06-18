@@ -5,7 +5,7 @@ AppPackages/
 .vs/
 _pt/
 _nupkg/
-TerminalShortcuts/bin/
-TerminalShortcuts/obj/
-TerminalShortcuts/setup-x64.iss
-TerminalShortcuts/setup-arm64.iss
+QuickShell/bin/
+QuickShell/obj/
+QuickShell/setup-x64.iss
+QuickShell/setup-arm64.iss

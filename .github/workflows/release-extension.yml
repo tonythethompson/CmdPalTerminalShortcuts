@@ -10,13 +10,13 @@ on:
       release_notes:
         description: Release notes
         required: false
-        default: Initial WinGet release of Terminal Shortcuts for Command Palette.
+        default: Quick Shell release for PowerToys Command Palette.
         type: string
 
 env:
-  DISPLAY_NAME: Terminal Shortcuts
-  EXTENSION_NAME: TerminalShortcuts
-  GITHUB_REPO_URL: https://github.com/tonythethompson/CmdPalTerminalShortcuts
+  DISPLAY_NAME: Quick Shell
+  EXTENSION_NAME: QuickShell
+  GITHUB_REPO_URL: https://github.com/tonythethompson/QuickShell
 
 jobs:
   build:
@@ -44,7 +44,7 @@ jobs:
           if ("${{ github.event.inputs.version }}" -ne "") {
             $version = "${{ github.event.inputs.version }}"
           } else {
-            $projectFile = "TerminalShortcuts/TerminalShortcuts.csproj"
+            $projectFile = "QuickShell/QuickShell.csproj"
             $xml = [xml](Get-Content $projectFile)
             $version = $xml.Project.PropertyGroup.AppxPackageVersion | Select-Object -First 1
             if (-not $version) { throw "AppxPackageVersion not found in $projectFile" }
@@ -55,47 +55,47 @@ jobs:
 
       - name: Build EXE installers
         run: |
-          Set-Location TerminalShortcuts
+          Set-Location QuickShell
           .\build-exe.ps1 -Version "${{ steps.version.outputs.VERSION }}"
         shell: pwsh
 
       - name: Upload x64 installer
         uses: actions/upload-artifact@v4
         with:
-          name: TerminalShortcuts-x64-installer
-          path: TerminalShortcuts/bin/Release/installer/*-x64.exe
+          name: QuickShell-x64-installer
+          path: QuickShell/bin/Release/installer/*-x64.exe
           if-no-files-found: error
 
       - name: Upload ARM64 installer
         uses: actions/upload-artifact@v4
         with:
-          name: TerminalShortcuts-arm64-installer
-          path: TerminalShortcuts/bin/Release/installer/*-arm64.exe
+          name: QuickShell-arm64-installer
+          path: QuickShell/bin/Release/installer/*-arm64.exe
           if-no-files-found: warn
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
-          name: Terminal Shortcuts v${{ steps.version.outputs.VERSION }}
+          name: Quick Shell v${{ steps.version.outputs.VERSION }}
           body: |
-            ## Terminal Shortcuts v${{ steps.version.outputs.VERSION }}
+            ## Quick Shell v${{ steps.version.outputs.VERSION }}
 
             ${{ github.event.inputs.release_notes }}
 
             ## Install
 
-            - **x64**: `TerminalShortcuts-Setup-${{ steps.version.outputs.VERSION }}-x64.exe`
-            - **ARM64**: `TerminalShortcuts-Setup-${{ steps.version.outputs.VERSION }}-arm64.exe`
+            - **x64**: `QuickShell-Setup-${{ steps.version.outputs.VERSION }}-x64.exe`
+            - **ARM64**: `QuickShell-Setup-${{ steps.version.outputs.VERSION }}-arm64.exe`
 
             After installing, run **Reload Command Palette Extension** in PowerToys Command Palette.
 
             ## WinGet
 
             ```powershell
-            winget install tonythethompson.TerminalShortcuts
+            winget install tonythethompson.QuickShell
             ```
-          files: TerminalShortcuts/bin/Release/installer/*.exe
+          files: QuickShell/bin/Release/installer/*.exe
           draft: false
           prerelease: false
         env:

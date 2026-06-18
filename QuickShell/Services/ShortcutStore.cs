@@ -1,7 +1,7 @@
 using System.Text.Json;
-using TerminalShortcuts.Models;
+using QuickShell.Models;
 
-namespace TerminalShortcuts.Services;
+namespace QuickShell.Services;
 
 internal static class ShortcutStore
 {
@@ -18,7 +18,7 @@ internal static class ShortcutStore
     private static DateTime _lastWriteTimeUtc = DateTime.MinValue;
 
     public static string ConfigDirectory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TerminalShortcutsCmdPal");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickShell");
 
     public static string ConfigPath => Path.Combine(ConfigDirectory, "shortcuts.json");
 
@@ -85,19 +85,17 @@ internal static class ShortcutStore
             return;
         }
 
-        var example = new List<TerminalShortcut>
+        var legacyPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TerminalShortcutsCmdPal",
+            "shortcuts.json");
+        if (File.Exists(legacyPath))
         {
-            new()
-            {
-                Name = "Example project",
-                Abbreviation = "ex",
-                Directory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                Command = string.Empty,
-                Terminal = "wt",
-            },
-        };
+            File.Copy(legacyPath, ConfigPath);
+            return;
+        }
 
-        File.WriteAllText(ConfigPath, JsonSerializer.Serialize(example, JsonOptions));
+        File.WriteAllText(ConfigPath, "[]");
     }
 
     private static bool IsValidShortcut(TerminalShortcut shortcut) =>

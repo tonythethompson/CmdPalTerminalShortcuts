@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using TerminalShortcuts.Models;
+using QuickShell.Models;
 
-namespace TerminalShortcuts.Services;
+namespace QuickShell.Services;
 
 internal static class TerminalLauncher
 {

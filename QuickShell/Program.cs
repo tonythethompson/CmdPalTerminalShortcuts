@@ -4,7 +4,7 @@ using Shmuelie.WinRTServer.CsWinRT;
 using System;
 using System.Threading;
 
-namespace TerminalShortcuts;
+namespace QuickShell;
 
 public class Program
 {
@@ -16,8 +16,8 @@ public class Program
             global::Shmuelie.WinRTServer.ComServer server = new();
 
             ManualResetEvent extensionDisposedEvent = new(false);
-            TerminalShortcutsExtension extensionInstance = new(extensionDisposedEvent);
-            server.RegisterClass<TerminalShortcutsExtension, IExtension>(() => extensionInstance);
+            QuickShellExtension extensionInstance = new(extensionDisposedEvent);
+            server.RegisterClass<QuickShellExtension, IExtension>(() => extensionInstance);
             server.Start();
 
             extensionDisposedEvent.WaitOne();

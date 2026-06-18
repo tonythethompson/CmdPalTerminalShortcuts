@@ -1,8 +1,8 @@
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
-using TerminalShortcuts.Services;
+using QuickShell.Services;
 
-namespace TerminalShortcuts.Commands;
+namespace QuickShell.Commands;
 
 internal sealed partial class ReloadShortcutsCommand : InvokableCommand
 {

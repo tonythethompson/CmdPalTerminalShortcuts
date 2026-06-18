@@ -1,24 +1,24 @@
 ﻿using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
-using TerminalShortcuts.Commands;
-using TerminalShortcuts.Pages;
-using TerminalShortcuts.Services;
+using QuickShell.Commands;
+using QuickShell.Pages;
+using QuickShell.Services;
 
-namespace TerminalShortcuts;
+namespace QuickShell;
 
-public partial class TerminalShortcutsCommandsProvider : CommandProvider
+public partial class QuickShellCommandsProvider : CommandProvider
 {
-    private readonly TerminalShortcutsPage _page;
+    private readonly QuickShellPage _page;
     private readonly ICommandItem[] _commands;
     private readonly IFallbackCommandItem[] _fallbacks;
 
-    public TerminalShortcutsCommandsProvider()
+    public QuickShellCommandsProvider()
     {
-        DisplayName = "Terminal Shortcuts";
+        DisplayName = "Quick Shell";
         Icon = new IconInfo("\uE756");
-        _page = new TerminalShortcutsPage();
+        _page = new QuickShellPage();
         _commands = [new CommandItem(_page) { Title = DisplayName, Subtitle = "Open saved terminal directories and commands" }];
-        _fallbacks = [new TerminalShortcutsFallback(_page)];
+        _fallbacks = [new QuickShellFallback(_page)];
     }
 
     public override ICommandItem[] TopLevelCommands() => _commands;

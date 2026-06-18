@@ -1,6 +1,6 @@
 # Builds self-contained EXE installers for x64 and ARM64 (WinGet distribution).
 param(
-    [string]$ExtensionName = "TerminalShortcuts",
+    [string]$ExtensionName = "QuickShell",
     [string]$Configuration = "Release",
     [string]$Version = "0.1.0.0",
     [string[]]$Platforms = @("x64", "arm64")

@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
 
 PackageIdentifier: tonythethompson.QuickShell
-PackageVersion: 0.1.0.0
+PackageVersion: 0.1.2.1
 PackageLocale: en-US
 Publisher: Tony Thompson
 PublisherUrl: https://github.com/tonythethompson
@@ -15,6 +15,9 @@ Description: |
   Quick Shell is a PowerToys Command Palette extension that lets you save
   favorite project directories and launch them in Windows Terminal, PowerShell,
   PowerShell 7, or cmd — optionally running a command on open.
+
+  After installing, open PowerToys Command Palette and run "Reload Command Palette Extension".
+  For full Command Palette integration, MSIX install via scripts/deploy.ps1 is recommended.
 Tags:
 - command-palette
 - commandline
@@ -23,6 +26,11 @@ Tags:
 - terminal
 - windows-commandpalette-extension
 - windows-terminal
-ReleaseNotesUrl: https://github.com/tonythethompson/QuickShell/releases/tag/v0.1.0.0
+ReleaseNotes: |
+  - Restore in-app shortcut create/edit, pin, and settings UI
+  - Preserve shortcuts across updates (recover from .bak and legacy paths)
+  - Fix Inno COM CLSID registry registration
+  - Run as administrator support
+ReleaseNotesUrl: https://github.com/tonythethompson/QuickShell/releases/tag/v0.1.2.1
 ManifestType: defaultLocale
 ManifestVersion: 1.9.0

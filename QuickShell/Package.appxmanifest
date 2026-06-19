@@ -10,8 +10,8 @@
 
   <Identity
     Name="QuickShell"
-    Publisher="CN=Tony Thompson"
-    Version="0.1.1.0" />
+    Publisher="CN=QuickShell Dev"
+    Version="0.1.2.0" />
 
   <Properties>
     <DisplayName>Quick Shell</DisplayName>

@@ -6,7 +6,7 @@ namespace QuickShell;
 
 internal sealed partial class QuickShellFallback : FallbackCommandItem
 {
-    public QuickShellFallback(QuickShellPage page)
+    public QuickShellFallback(QuickShellFallbackPage page)
         : base("com.quickshell.fallback", "Quick Shell shortcut")
     {
         Command = page;
@@ -14,7 +14,7 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
 
     public override void UpdateQuery(string query)
     {
-        if (Command is QuickShellPage page)
+        if (Command is QuickShellFallbackPage page)
         {
             page.UpdateSearchText(string.Empty, query);
         }

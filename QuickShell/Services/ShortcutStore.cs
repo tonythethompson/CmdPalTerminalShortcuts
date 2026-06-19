@@ -1,21 +1,22 @@
-using System.Text.Json;
 using QuickShell.Models;
+using System.Text.Json;
+using System.Threading;
 
 namespace QuickShell.Services;
 
 internal static class ShortcutStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-        WriteIndented = true,
-    };
+    private const int MaxConfigBytes = 2 * 1024 * 1024;
 
     private static readonly object Sync = new();
-    private static IReadOnlyList<TerminalShortcut> _shortcuts = [];
+    private static readonly Mutex FileMutex = new(false, @"Global\QuickShell_shortcuts_json");
+
+    private static TerminalShortcut[] _shortcuts = [];
+    private static TerminalShortcut[] _lastGoodShortcuts = [];
     private static DateTime _lastWriteTimeUtc = DateTime.MinValue;
+    private static bool _configEnsured;
+    private static bool _persistPending;
+    private static Timer? _persistTimer;
 
     public static string ConfigDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickShell");
@@ -27,7 +28,22 @@ internal static class ShortcutStore
         lock (Sync)
         {
             EnsureLoaded();
-            return _shortcuts;
+            return CloneAll(_shortcuts);
+        }
+    }
+
+    public static TerminalShortcut? GetByName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        lock (Sync)
+        {
+            EnsureLoaded();
+            var shortcut = _shortcuts.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            return shortcut is null ? null : Clone(shortcut);
         }
     }
 
@@ -35,9 +51,202 @@ internal static class ShortcutStore
     {
         lock (Sync)
         {
+            CancelPendingPersist();
             _lastWriteTimeUtc = DateTime.MinValue;
             EnsureLoaded(force: true);
         }
+    }
+
+    public static void FlushPendingWrites()
+    {
+        lock (Sync)
+        {
+            FlushPendingPersistLocked();
+        }
+    }
+
+    public static void Upsert(TerminalShortcut shortcut, string? originalName = null)
+    {
+        if (!ShortcutValidation.TryValidate(shortcut, out var validationError))
+        {
+            throw new InvalidOperationException(validationError);
+        }
+
+        if (!ShortcutValidation.TryValidateUniqueName(shortcut.Name, originalName, out validationError))
+        {
+            throw new InvalidOperationException(validationError);
+        }
+
+        lock (Sync)
+        {
+            EnsureLoaded();
+            CancelPendingPersist();
+
+            var list = _shortcuts.Select(Clone).ToList();
+
+            var existing = list.FirstOrDefault(s =>
+                s.Name.Equals(shortcut.Name, StringComparison.OrdinalIgnoreCase) ||
+                (!string.IsNullOrWhiteSpace(originalName) && s.Name.Equals(originalName, StringComparison.OrdinalIgnoreCase)));
+
+            if (existing is not null)
+            {
+                shortcut.IsPinned = existing.IsPinned;
+                shortcut.PinOrder = existing.PinOrder;
+                shortcut.LastUsedUtc = existing.LastUsedUtc;
+            }
+
+            if (!string.IsNullOrWhiteSpace(originalName))
+            {
+                list.RemoveAll(s => s.Name.Equals(originalName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            list.RemoveAll(s => s.Name.Equals(shortcut.Name, StringComparison.OrdinalIgnoreCase));
+            list.Add(Clone(shortcut));
+
+            if (shortcut.IsPinned && shortcut.PinOrder is null)
+            {
+                SetPinOrder(list, shortcut.Name, NextPinOrder(list));
+            }
+
+            SaveLocked(list);
+        }
+    }
+
+    public static bool Delete(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        lock (Sync)
+        {
+            EnsureLoaded();
+            CancelPendingPersist();
+
+            var list = _shortcuts.Select(Clone).ToList();
+            var removed = list.RemoveAll(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) > 0;
+            if (removed)
+            {
+                SaveLocked(list);
+            }
+
+            return removed;
+        }
+    }
+
+    public static bool TogglePinned(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        lock (Sync)
+        {
+            EnsureLoaded();
+            CancelPendingPersist();
+
+            var list = _shortcuts.Select(Clone).ToList();
+            var shortcut = list.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (shortcut is null)
+            {
+                return false;
+            }
+
+            shortcut.IsPinned = !shortcut.IsPinned;
+            shortcut.PinOrder = shortcut.IsPinned ? NextPinOrder(list) : null;
+            SaveLocked(list);
+            return shortcut.IsPinned;
+        }
+    }
+
+    public static bool MovePinned(string name, int direction)
+    {
+        if (string.IsNullOrWhiteSpace(name) || direction == 0)
+        {
+            return false;
+        }
+
+        lock (Sync)
+        {
+            EnsureLoaded();
+            CancelPendingPersist();
+
+            var list = _shortcuts.Select(Clone).ToList();
+            var pinned = list
+                .Where(s => s.IsPinned)
+                .OrderBy(s => s.PinOrder ?? int.MaxValue)
+                .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var index = pinned.FindIndex(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var target = index + direction;
+            if (target < 0 || target >= pinned.Count)
+            {
+                return false;
+            }
+
+            (pinned[index], pinned[target]) = (pinned[target], pinned[index]);
+            for (var i = 0; i < pinned.Count; i++)
+            {
+                SetPinOrder(list, pinned[i].Name, i + 1);
+            }
+
+            SaveLocked(list);
+            return true;
+        }
+    }
+
+    public static void MarkUsed(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        lock (Sync)
+        {
+            EnsureLoaded();
+
+            var list = _shortcuts.Select(Clone).ToList();
+            var shortcut = list.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (shortcut is null)
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            if (shortcut.LastUsedUtc is not null && (now - shortcut.LastUsedUtc.Value).TotalSeconds < 2)
+            {
+                return;
+            }
+
+            shortcut.LastUsedUtc = now;
+            _shortcuts = OrderForDisplay(list);
+            SchedulePersistLocked();
+        }
+    }
+
+    public static TerminalShortcut? BuildDuplicate(string name)
+    {
+        var source = GetByName(name);
+        if (source is null)
+        {
+            return null;
+        }
+
+        var copy = Clone(source);
+        copy.Name = GetDuplicateName(copy.Name);
+        copy.IsPinned = false;
+        copy.PinOrder = null;
+        copy.LastUsedUtc = null;
+        return copy;
     }
 
     public static IEnumerable<TerminalShortcut> Search(string query)
@@ -63,39 +272,194 @@ internal static class ShortcutStore
 
         try
         {
+            var fileInfo = new FileInfo(ConfigPath);
+            if (fileInfo.Length > MaxConfigBytes)
+            {
+                _shortcuts = _lastGoodShortcuts.Length > 0 ? CloneAll(_lastGoodShortcuts) : [];
+                _lastWriteTimeUtc = writeTime;
+                return;
+            }
+
             var json = File.ReadAllText(ConfigPath);
-            _shortcuts = JsonSerializer.Deserialize<List<TerminalShortcut>>(json, JsonOptions)?
-                .Where(IsValidShortcut)
-                .ToArray() ?? [];
+            var parsed = JsonSerializer.Deserialize(json, QuickShellJsonContext.Default.ListTerminalShortcut);
+            if (parsed is null)
+            {
+                throw new InvalidDataException("Shortcut file was empty.");
+            }
+
+            if (parsed.Count > ShortcutValidation.MaxShortcutCount)
+            {
+                throw new InvalidDataException("Shortcut file exceeds the supported shortcut count.");
+            }
+
+            _shortcuts = OrderForDisplay(
+                parsed
+                    .Where(IsValidShortcut)
+                    .Select(Normalize)
+                    .Select(Clone)
+                    .ToArray());
+
+            _lastGoodShortcuts = CloneAll(_shortcuts);
+            _lastWriteTimeUtc = writeTime;
         }
         catch
         {
-            _shortcuts = [];
+            _shortcuts = _lastGoodShortcuts.Length > 0 ? CloneAll(_lastGoodShortcuts) : [];
+            _lastWriteTimeUtc = writeTime;
         }
-
-        _lastWriteTimeUtc = writeTime;
     }
 
     private static void EnsureConfigExists()
     {
+        if (_configEnsured)
+        {
+            return;
+        }
+
         Directory.CreateDirectory(ConfigDirectory);
 
-        if (File.Exists(ConfigPath))
+        if (!File.Exists(ConfigPath))
+        {
+            var empty = Array.Empty<TerminalShortcut>();
+            WriteShortcutsAtomic(empty);
+            _lastGoodShortcuts = empty;
+            _shortcuts = empty;
+            _lastWriteTimeUtc = File.GetLastWriteTimeUtc(ConfigPath);
+        }
+
+        _configEnsured = true;
+    }
+
+    private static void SaveLocked(IReadOnlyCollection<TerminalShortcut> shortcuts)
+    {
+        Directory.CreateDirectory(ConfigDirectory);
+        var ordered = OrderForDisplay(shortcuts.Where(IsValidShortcut).Select(Normalize).Select(Clone));
+        WriteShortcutsAtomic(ordered);
+        _shortcuts = ordered;
+        _lastGoodShortcuts = CloneAll(ordered);
+        _lastWriteTimeUtc = File.GetLastWriteTimeUtc(ConfigPath);
+    }
+
+    private static void SchedulePersistLocked()
+    {
+        _persistPending = true;
+        _persistTimer ??= new Timer(_ => FlushPendingPersistLocked(), null, Timeout.Infinite, Timeout.Infinite);
+        _persistTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+    }
+
+    private static void CancelPendingPersist()
+    {
+        _persistPending = false;
+        _persistTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+    }
+
+    private static void FlushPendingPersistLocked()
+    {
+        if (!_persistPending)
         {
             return;
         }
 
-        var legacyPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TerminalShortcutsCmdPal",
-            "shortcuts.json");
-        if (File.Exists(legacyPath))
+        _persistPending = false;
+        WriteShortcutsAtomic(_shortcuts);
+        _lastGoodShortcuts = CloneAll(_shortcuts);
+        _lastWriteTimeUtc = File.GetLastWriteTimeUtc(ConfigPath);
+    }
+
+    private static void WriteShortcutsAtomic(TerminalShortcut[] shortcuts)
+    {
+        if (shortcuts.Length > ShortcutValidation.MaxShortcutCount)
         {
-            File.Copy(legacyPath, ConfigPath);
-            return;
+            throw new InvalidOperationException($"At most {ShortcutValidation.MaxShortcutCount} shortcuts are supported.");
         }
 
-        File.WriteAllText(ConfigPath, "[]");
+        var json = JsonSerializer.Serialize(shortcuts, QuickShellJsonContext.Default.TerminalShortcutArray);
+        if (json.Length > MaxConfigBytes)
+        {
+            throw new InvalidOperationException("Shortcut data is too large to save.");
+        }
+
+        Directory.CreateDirectory(ConfigDirectory);
+
+        var tempPath = ConfigPath + ".tmp";
+        var backupPath = ConfigPath + ".bak";
+
+        if (!FileMutex.WaitOne(TimeSpan.FromSeconds(5)))
+        {
+            throw new IOException("Could not acquire the shortcut store lock.");
+        }
+
+        try
+        {
+            File.WriteAllText(tempPath, json);
+
+            if (File.Exists(ConfigPath))
+            {
+                File.Replace(tempPath, ConfigPath, backupPath, ignoreMetadataErrors: true);
+            }
+            else
+            {
+                File.Move(tempPath, ConfigPath);
+            }
+        }
+        finally
+        {
+            FileMutex.ReleaseMutex();
+
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch
+            {
+                // Best effort.
+            }
+        }
+    }
+
+    private static TerminalShortcut[] OrderForDisplay(IEnumerable<TerminalShortcut> shortcuts) =>
+        shortcuts
+            .OrderByDescending(s => s.IsPinned)
+            .ThenBy(s => s.PinOrder ?? int.MaxValue)
+            .ThenByDescending(s => s.LastUsedUtc ?? DateTime.MinValue)
+            .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private static int NextPinOrder(IEnumerable<TerminalShortcut> list) =>
+        list.Where(s => s.IsPinned).Select(s => s.PinOrder ?? 0).DefaultIfEmpty().Max() + 1;
+
+    private static void SetPinOrder(List<TerminalShortcut> list, string name, int order)
+    {
+        var shortcut = list.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (shortcut is not null)
+        {
+            shortcut.PinOrder = order;
+        }
+    }
+
+    private static string GetDuplicateName(string sourceName)
+    {
+        var existingNames = GetShortcuts().Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var baseName = $"{sourceName} Copy";
+        if (!existingNames.Contains(baseName))
+        {
+            return baseName;
+        }
+
+        var i = 2;
+        while (true)
+        {
+            var candidate = $"{sourceName} Copy {i}";
+            if (!existingNames.Contains(candidate))
+            {
+                return candidate;
+            }
+
+            i++;
+        }
     }
 
     private static bool IsValidShortcut(TerminalShortcut shortcut) =>
@@ -108,10 +472,17 @@ internal static class ShortcutStore
             return true;
         }
 
-        if (!string.IsNullOrWhiteSpace(shortcut.Abbreviation) &&
-            shortcut.Abbreviation.Contains(query, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(shortcut.Abbreviation))
         {
-            return true;
+            if (shortcut.Abbreviation.Equals(query, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (shortcut.Abbreviation.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
         }
 
         if (shortcut.Directory.Contains(query, StringComparison.OrdinalIgnoreCase))
@@ -119,7 +490,53 @@ internal static class ShortcutStore
             return true;
         }
 
+        if (!string.IsNullOrWhiteSpace(shortcut.WtProfile) &&
+            shortcut.WtProfile.Contains(query, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         return !string.IsNullOrWhiteSpace(shortcut.Command) &&
                shortcut.Command.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static TerminalShortcut Normalize(TerminalShortcut shortcut)
+    {
+        var terminal = (shortcut.Terminal ?? string.Empty).Trim().ToLowerInvariant();
+        shortcut.Terminal = terminal switch
+        {
+            "wt" or "windows-terminal" => "wt",
+            "powershell" => "powershell",
+            "pwsh" or "powershell7" => "pwsh",
+            "cmd" => "cmd",
+            "default" or "" => "default",
+            _ => "default",
+        };
+
+        shortcut.WtProfile = string.IsNullOrWhiteSpace(shortcut.WtProfile) ? null : shortcut.WtProfile.Trim();
+
+        if (!shortcut.IsPinned)
+        {
+            shortcut.PinOrder = null;
+        }
+
+        return shortcut;
+    }
+
+    private static TerminalShortcut[] CloneAll(IEnumerable<TerminalShortcut> shortcuts) =>
+        shortcuts.Select(Clone).ToArray();
+
+    private static TerminalShortcut Clone(TerminalShortcut shortcut) => new()
+    {
+        Name = shortcut.Name,
+        Abbreviation = shortcut.Abbreviation,
+        Directory = shortcut.Directory,
+        Command = shortcut.Command,
+        Terminal = shortcut.Terminal,
+        WtProfile = shortcut.WtProfile,
+        RunAsAdmin = shortcut.RunAsAdmin,
+        IsPinned = shortcut.IsPinned,
+        PinOrder = shortcut.PinOrder,
+        LastUsedUtc = shortcut.LastUsedUtc,
+    };
 }

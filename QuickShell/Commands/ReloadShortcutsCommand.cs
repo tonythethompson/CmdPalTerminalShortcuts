@@ -1,4 +1,3 @@
-using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Services;
 
@@ -11,14 +10,15 @@ internal sealed partial class ReloadShortcutsCommand : InvokableCommand
     public ReloadShortcutsCommand(Action onReload)
     {
         _onReload = onReload;
-        Name = "Reload shortcuts";
+        Name = "Refresh terminals";
         Icon = new IconInfo("\uE72C");
     }
 
     public override CommandResult Invoke()
     {
         ShortcutStore.Reload();
+        TerminalCatalog.InvalidateCache();
         _onReload();
-        return CommandResult.KeepOpen();
+        return QuickShellNavigation.StayOpen("Refreshed shortcuts and terminals.");
     }
 }

@@ -1,33 +1,89 @@
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Commands;
+using QuickShell.Models;
 using QuickShell.Services;
 
 namespace QuickShell.Pages;
 
-internal sealed partial class QuickShellPage : DynamicListPage
+internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 {
+    private readonly QuickShellSettingsManager _settings;
+    private readonly SearchDebouncer _searchDebouncer;
     private IListItem[] _items = [];
     private string _query = string.Empty;
+    private bool _hasShownInitialList;
 
-    public QuickShellPage()
+    public QuickShellPage(QuickShellSettingsManager settings)
     {
+        _settings = settings;
+        _searchDebouncer = new SearchDebouncer(ApplyQueryDebounced);
+        Id = QuickShellNavigation.HomePageId;
         Icon = new IconInfo("\uE756");
         Title = "Quick Shell";
         Name = "Open";
-        PlaceholderText = "Search shortcuts by name, abbreviation, path, or command...";
+        PlaceholderText = "Search shortcuts by name, path, or command...";
         RefreshItems(string.Empty);
     }
 
     public override void UpdateSearchText(string oldSearch, string newSearch)
     {
-        _query = newSearch;
-        RefreshItems(newSearch);
+        if (string.IsNullOrEmpty(oldSearch) && string.IsNullOrEmpty(newSearch))
+        {
+            _hasShownInitialList = false;
+            ApplyQuery(string.Empty, immediate: true);
+            return;
+        }
+
+        if (!_hasShownInitialList)
+        {
+            _hasShownInitialList = true;
+            SetSearchNoUpdate(string.Empty);
+            ApplyQuery(string.Empty, immediate: true);
+            return;
+        }
+
+        ApplyQuery(newSearch);
     }
 
     public override IListItem[] GetItems() => _items;
 
-    public void Reload() => RefreshItems(_query);
+    public void Reload()
+    {
+        _searchDebouncer.FlushNow();
+        RefreshItems(_query);
+    }
+
+    public void Dispose() => _searchDebouncer.Dispose();
+
+    private void ApplyQuery(string query, bool immediate = false)
+    {
+        var normalized = query ?? string.Empty;
+        if (string.Equals(_query, normalized, StringComparison.Ordinal) && _items.Length > 0)
+        {
+            return;
+        }
+
+        if (immediate)
+        {
+            _searchDebouncer.FlushNow();
+            ApplyQueryDebounced(normalized);
+            return;
+        }
+
+        _searchDebouncer.Schedule(normalized);
+    }
+
+    private void ApplyQueryDebounced(string normalized)
+    {
+        if (string.Equals(_query, normalized, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _query = normalized;
+        RefreshItems(normalized);
+    }
 
     private void RefreshItems(string query)
     {
@@ -36,63 +92,58 @@ internal sealed partial class QuickShellPage : DynamicListPage
 
         foreach (var shortcut in shortcuts)
         {
-            var item = new ListItem(new OpenTerminalShortcutCommand(shortcut))
-            {
-                Title = shortcut.Name,
-                Subtitle = BuildSubtitle(shortcut),
-            };
-
-            if (!shortcut.RunAsAdmin)
-            {
-                item.MoreCommands =
-                [
-                    new CommandContextItem(new OpenTerminalShortcutCommand(shortcut, runAsAdmin: true))
-                    {
-                        Title = "Open as administrator",
-                    },
-                ];
-            }
-
-            items.Add(item);
+            items.Add(BuildShortcutItem(shortcut));
         }
 
+        items.Add(new ListItem(new ShortcutFormPage(onSaved: Reload))
+        {
+            Title = "Create new shortcut",
+            Subtitle = "Directory and optional command",
+        });
         items.Add(new ListItem(new ReloadShortcutsCommand(Reload))
         {
-            Title = "Reload shortcuts",
-            Subtitle = $"Reload {ShortcutStore.ConfigPath}",
+            Title = "Refresh terminals",
+            Subtitle = "Reload shortcuts and rediscover installed terminals",
         });
 
-        items.Add(new ListItem(new OpenUrlCommand($"file:///{ShortcutStore.ConfigPath.Replace('\\', '/')}"))
+        if (!string.IsNullOrWhiteSpace(query) && shortcuts.Length == 0)
         {
-            Title = "Open shortcuts.json",
-            Subtitle = ShortcutStore.ConfigPath,
-        });
+            items.Add(new ListItem(new NoOpCommand())
+            {
+                Title = "No matching shortcuts",
+                Subtitle = "Try a different search",
+            });
+        }
 
         _items = items.ToArray();
         RaiseItemsChanged();
     }
 
-    private static string BuildSubtitle(Models.TerminalShortcut shortcut)
+    private ListItem BuildShortcutItem(TerminalShortcut shortcut)
     {
-        var parts = new List<string> { shortcut.Directory };
-
-        if (!string.IsNullOrWhiteSpace(shortcut.Abbreviation))
+        var item = new ListItem(new OpenTerminalShortcutCommand(shortcut, _settings))
         {
-            parts.Add($"abbr: {shortcut.Abbreviation}");
+            Title = shortcut.Name,
+            Subtitle = ShortcutDisplay.BuildSubtitle(shortcut),
+        };
+
+        var tags = ShortcutDisplay.BuildTags(shortcut);
+        if (tags is not null)
+        {
+            item.Tags = tags;
         }
 
-        if (!string.IsNullOrWhiteSpace(shortcut.Command))
+        var moreCommands = new List<CommandContextItem>(ShortcutContextCommands.Build(shortcut, Reload, _settings));
+
+        if (!shortcut.RunAsAdmin)
         {
-            parts.Add($"run: {shortcut.Command}");
+            moreCommands.Insert(0, new CommandContextItem(new OpenTerminalShortcutCommand(shortcut, _settings, runAsAdmin: true))
+            {
+                Title = "Open as administrator",
+            });
         }
 
-        parts.Add($"terminal: {shortcut.Terminal}");
-
-        if (shortcut.RunAsAdmin)
-        {
-            parts.Add("admin");
-        }
-
-        return string.Join(" | ", parts);
+        item.MoreCommands = moreCommands.ToArray();
+        return item;
     }
 }

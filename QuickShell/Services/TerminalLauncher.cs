@@ -1,25 +1,50 @@
-using System.Diagnostics;
 using QuickShell.Models;
+using System.Diagnostics;
 
 namespace QuickShell.Services;
 
 internal static class TerminalLauncher
 {
-    public static void Open(TerminalShortcut shortcut, bool runAsAdmin = false)
+    public static void Open(TerminalShortcut shortcut, string defaultLaunchTargetId, bool runAsAdmin = false)
     {
-        if (!Directory.Exists(shortcut.Directory))
+        if (!ShortcutValidation.TryNormalizeDirectory(shortcut.Directory, out var directory, out var error))
         {
-            throw new DirectoryNotFoundException($"Directory not found: {shortcut.Directory}");
+            throw new InvalidOperationException(error);
         }
 
-        var terminal = shortcut.Terminal?.Trim().ToLowerInvariant() ?? "wt";
-        var startInfo = terminal switch
+        if (!ShortcutValidation.DirectoryExists(directory))
         {
-            "wt" or "windows-terminal" => CreateWindowsTerminalStartInfo(shortcut),
-            "powershell" or "pwsh" => CreatePowerShellStartInfo(shortcut, usePwsh: false),
-            "pwsh" or "powershell7" => CreatePowerShellStartInfo(shortcut, usePwsh: true),
-            "cmd" => CreateCmdStartInfo(shortcut),
-            _ => CreateWindowsTerminalStartInfo(shortcut),
+            throw new DirectoryNotFoundException($"Directory not found: {directory}");
+        }
+
+        if (!ShortcutValidation.TryValidateCommand(shortcut.Command, out error))
+        {
+            throw new InvalidOperationException(error);
+        }
+
+        var launchShortcut = new TerminalShortcut
+        {
+            Name = shortcut.Name,
+            Abbreviation = shortcut.Abbreviation,
+            Directory = directory,
+            Command = shortcut.Command,
+            Terminal = shortcut.Terminal,
+            WtProfile = shortcut.WtProfile,
+            RunAsAdmin = shortcut.RunAsAdmin,
+            IsPinned = shortcut.IsPinned,
+            PinOrder = shortcut.PinOrder,
+            LastUsedUtc = shortcut.LastUsedUtc,
+        };
+
+        var target = TerminalCatalog.ResolveForShortcut(launchShortcut, defaultLaunchTargetId);
+        var startInfo = target.Kind switch
+        {
+            LaunchTargetKind.WindowsTerminal => CreateWindowsTerminalStartInfo(launchShortcut, target),
+            LaunchTargetKind.PowerShell => CreatePowerShellStartInfo(launchShortcut, usePwsh: false),
+            LaunchTargetKind.Pwsh => CreatePowerShellStartInfo(launchShortcut, usePwsh: true),
+            LaunchTargetKind.Cmd => CreateCmdStartInfo(launchShortcut, target),
+            LaunchTargetKind.Wsl => CreateWslStartInfo(launchShortcut, target),
+            _ => CreateWindowsTerminalStartInfo(launchShortcut, target),
         };
 
         if (runAsAdmin || shortcut.RunAsAdmin)
@@ -27,54 +52,127 @@ internal static class TerminalLauncher
             startInfo.Verb = "runas";
         }
 
-        Process.Start(startInfo);
+        if (Process.Start(startInfo) is null)
+        {
+            throw new InvalidOperationException($"Failed to start {startInfo.FileName}.");
+        }
     }
 
-    private static ProcessStartInfo CreateWindowsTerminalStartInfo(TerminalShortcut shortcut)
+    private static ProcessStartInfo CreateWindowsTerminalStartInfo(TerminalShortcut shortcut, LaunchTarget target)
     {
-        var arguments = $"-d \"{shortcut.Directory}\"";
-
-        if (!string.IsNullOrWhiteSpace(shortcut.Command))
+        if (WslPathResolver.TryParse(shortcut.Directory, out var wslLocation))
         {
-            var command = EscapeForCmd(shortcut.Command);
-            arguments += $" cmd /k \"{command}\"";
+            return CreateWindowsTerminalForWslDirectory(shortcut, target, wslLocation);
         }
 
-        return new ProcessStartInfo
+        var arguments = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(target.ProfileOrDistro))
         {
-            FileName = "wt.exe",
-            Arguments = arguments,
-            UseShellExecute = true,
-        };
+            arguments.Add($"-p \"{EscapeWindowsTerminalArg(target.ProfileOrDistro)}\"");
+        }
+
+        if (!IsWslProfile(target))
+        {
+            arguments.Add($"-d \"{EscapeWindowsTerminalArg(shortcut.Directory)}\"");
+        }
+
+        if (!string.IsNullOrWhiteSpace(shortcut.Command) || IsWslProfile(target))
+        {
+            arguments.Add(BuildWindowsTerminalCommandSuffix(shortcut, target));
+        }
+
+        return CreateWtStartInfo(arguments);
+    }
+
+    private static ProcessStartInfo CreateWindowsTerminalForWslDirectory(
+        TerminalShortcut shortcut,
+        LaunchTarget target,
+        WslPathResolver.WslLocation wslLocation)
+    {
+        var arguments = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(target.ProfileOrDistro))
+        {
+            arguments.Add($"-p \"{EscapeWindowsTerminalArg(target.ProfileOrDistro)}\"");
+        }
+
+        if (IsWslProfile(target))
+        {
+            arguments.Add(ToWslExecutableCommand(shortcut, target, wslLocation));
+            return CreateWtStartInfo(arguments);
+        }
+
+        if (IsPowerShellProfile(target))
+        {
+            var directory = wslLocation.UncPath ?? shortcut.Directory;
+            arguments.Add(ToPowerShellExecutableCommand(shortcut, GetPowerShellPathForProfile(target), directory));
+            return CreateWtStartInfo(arguments);
+        }
+
+        arguments.Add(ToWslExecutableCommand(shortcut, target, wslLocation));
+        return CreateWtStartInfo(arguments);
+    }
+
+    private static string BuildWindowsTerminalCommandSuffix(TerminalShortcut shortcut, LaunchTarget target)
+    {
+        var command = shortcut.Command?.Trim();
+
+        if (WslPathResolver.TryParse(shortcut.Directory, out var wslLocation))
+        {
+            return ToWslExecutableCommand(shortcut, target, wslLocation, interactiveShell: string.IsNullOrWhiteSpace(command));
+        }
+
+        if (IsWslProfile(target))
+        {
+            return ToWslExecutableCommand(shortcut, target, CreateLocationFromWindowsPath(shortcut.Directory, target), interactiveShell: string.IsNullOrWhiteSpace(command));
+        }
+
+        var commandLine = target.WtCommandLine ?? string.Empty;
+
+        if (commandLine.Contains("pwsh", StringComparison.OrdinalIgnoreCase))
+        {
+            return ToPowerShellExecutableCommand(shortcut, "pwsh.exe", shortcut.Directory);
+        }
+
+        if (commandLine.Contains("powershell", StringComparison.OrdinalIgnoreCase))
+        {
+            return ToPowerShellExecutableCommand(shortcut, "powershell.exe", shortcut.Directory);
+        }
+
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            return string.Empty;
+        }
+
+        return $"cmd.exe /k \"cd /d \"{EscapeCmd(shortcut.Directory)}\" && {EscapeCmd(command)}\"";
     }
 
     private static ProcessStartInfo CreatePowerShellStartInfo(TerminalShortcut shortcut, bool usePwsh)
     {
         var fileName = usePwsh ? "pwsh.exe" : "powershell.exe";
-        var arguments = $"-NoExit -Command \"Set-Location -LiteralPath '{EscapeForSingleQuotedPowerShell(shortcut.Directory)}'";
-
-        if (!string.IsNullOrWhiteSpace(shortcut.Command))
-        {
-            arguments += $"; {shortcut.Command}";
-        }
-
-        arguments += '"';
+        var directory = ResolveDirectoryForPowerShell(shortcut.Directory);
 
         return new ProcessStartInfo
         {
             FileName = fileName,
-            Arguments = arguments,
+            Arguments = ToPowerShellArguments(shortcut, directory),
             UseShellExecute = true,
         };
     }
 
-    private static ProcessStartInfo CreateCmdStartInfo(TerminalShortcut shortcut)
+    private static ProcessStartInfo CreateCmdStartInfo(TerminalShortcut shortcut, LaunchTarget target)
     {
-        var arguments = $"/k \"cd /d \"{shortcut.Directory}\"";
+        if (WslPathResolver.TryParse(shortcut.Directory, out var wslLocation))
+        {
+            return CreateWslProcessStartInfo(shortcut, target, wslLocation);
+        }
+
+        var arguments = $"/k \"cd /d \"{EscapeCmd(shortcut.Directory)}\"";
 
         if (!string.IsNullOrWhiteSpace(shortcut.Command))
         {
-            arguments += $" && {shortcut.Command}";
+            arguments += $" && {EscapeCmd(shortcut.Command)}";
         }
 
         arguments += '"';
@@ -87,7 +185,137 @@ internal static class TerminalLauncher
         };
     }
 
-    private static string EscapeForCmd(string value) => value.Replace("\"", "\"\"");
+    private static ProcessStartInfo CreateWslStartInfo(TerminalShortcut shortcut, LaunchTarget target)
+    {
+        if (WslPathResolver.TryParse(shortcut.Directory, out var wslLocation))
+        {
+            return CreateWslProcessStartInfo(shortcut, target, wslLocation);
+        }
 
-    private static string EscapeForSingleQuotedPowerShell(string value) => value.Replace("'", "''");
+        return CreateWslProcessStartInfo(shortcut, target, CreateLocationFromWindowsPath(shortcut.Directory, target));
+    }
+
+    private static ProcessStartInfo CreateWslProcessStartInfo(
+        TerminalShortcut shortcut,
+        LaunchTarget target,
+        WslPathResolver.WslLocation wslLocation) =>
+        new()
+        {
+            FileName = "wsl.exe",
+            Arguments = ToWslArguments(shortcut, target, wslLocation),
+            UseShellExecute = true,
+        };
+
+    private static string ToWslExecutableCommand(
+        TerminalShortcut shortcut,
+        LaunchTarget target,
+        WslPathResolver.WslLocation wslLocation,
+        bool interactiveShell = false)
+    {
+        var args = ToWslArguments(shortcut, target, wslLocation, interactiveShell);
+        return $"wsl.exe {args}";
+    }
+
+    private static string ToWslArguments(
+        TerminalShortcut shortcut,
+        LaunchTarget target,
+        WslPathResolver.WslLocation wslLocation,
+        bool interactiveShell = false)
+    {
+        var distro = WslPathResolver.ResolveDistro(wslLocation, target);
+        var arguments = $"-d \"{EscapeWindowsTerminalArg(distro)}\" --cd \"{EscapeWindowsTerminalArg(wslLocation.LinuxPath)}\"";
+
+        if (!string.IsNullOrWhiteSpace(shortcut.Command))
+        {
+            arguments += $" -e bash -lc \"{EscapeBash(shortcut.Command)}\"";
+        }
+        else if (interactiveShell)
+        {
+            arguments += " -e bash";
+        }
+
+        return arguments;
+    }
+
+    private static string ToPowerShellExecutableCommand(TerminalShortcut shortcut, string executable, string directory) =>
+        $"{executable} {ToPowerShellArguments(shortcut, directory)}";
+
+    private static string ToPowerShellArguments(TerminalShortcut shortcut, string directory)
+    {
+        var arguments = $"-NoExit -Command \"Set-Location -LiteralPath '{EscapeSingleQuotedPowerShell(directory)}'";
+
+        if (!string.IsNullOrWhiteSpace(shortcut.Command))
+        {
+            arguments += $"; {EscapePowerShellInline(shortcut.Command)}";
+        }
+
+        arguments += '"';
+        return arguments;
+    }
+
+    private static WslPathResolver.WslLocation CreateLocationFromWindowsPath(string directory, LaunchTarget target) =>
+        new()
+        {
+            LinuxPath = directory,
+            Distro = target.ProfileOrDistro,
+        };
+
+    private static string ResolveDirectoryForPowerShell(string directory)
+    {
+        if (WslPathResolver.TryParse(directory, out var wslLocation) && !string.IsNullOrWhiteSpace(wslLocation.UncPath))
+        {
+            return wslLocation.UncPath;
+        }
+
+        return directory;
+    }
+
+    private static ProcessStartInfo CreateWtStartInfo(IEnumerable<string> arguments) =>
+        new()
+        {
+            FileName = "wt.exe",
+            Arguments = string.Join(' ', arguments.Where(arg => !string.IsNullOrWhiteSpace(arg))),
+            UseShellExecute = true,
+        };
+
+    private static bool IsWslProfile(LaunchTarget target)
+    {
+        if (target.Kind == LaunchTargetKind.Wsl)
+        {
+            return true;
+        }
+
+        var commandLine = target.WtCommandLine ?? string.Empty;
+        return commandLine.Contains("wsl.exe", StringComparison.OrdinalIgnoreCase)
+            || commandLine.Contains("wslhost.exe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPowerShellProfile(LaunchTarget target)
+    {
+        if (target.Kind is LaunchTargetKind.PowerShell or LaunchTargetKind.Pwsh)
+        {
+            return true;
+        }
+
+        var commandLine = target.WtCommandLine ?? string.Empty;
+        return commandLine.Contains("pwsh", StringComparison.OrdinalIgnoreCase)
+            || commandLine.Contains("powershell", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetPowerShellPathForProfile(LaunchTarget target) =>
+        (target.WtCommandLine ?? string.Empty).Contains("pwsh", StringComparison.OrdinalIgnoreCase)
+            || target.Kind == LaunchTargetKind.Pwsh
+            ? "pwsh.exe"
+            : "powershell.exe";
+
+    private static string EscapeWindowsTerminalArg(string value) => value.Replace("\"", "\\\"");
+
+    private static string EscapeCmd(string value) => value.Replace("\"", "\"\"");
+
+    private static string EscapeSingleQuotedPowerShell(string value) => value.Replace("'", "''");
+
+    private static string EscapePowerShellInline(string value) =>
+        value.Replace("`", "``", StringComparison.Ordinal).Replace("\"", "`\"", StringComparison.Ordinal);
+
+    private static string EscapeBash(string value) => value.Replace("\"", "\\\"");
 }

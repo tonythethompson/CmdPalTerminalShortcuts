@@ -10,7 +10,18 @@ internal sealed class TerminalShortcut
 
     public string? Command { get; set; }
 
-    public string Terminal { get; set; } = "wt";
+    // "default" means use extension-level default terminal setting.
+    public string Terminal { get; set; } = "default";
+
+    // Optional Windows Terminal profile name for terminal=wt/default->wt.
+    public string? WtProfile { get; set; }
 
     public bool RunAsAdmin { get; set; }
+
+    public bool IsPinned { get; set; }
+
+    // Lower number means higher in pinned section.
+    public int? PinOrder { get; set; }
+
+    public DateTime? LastUsedUtc { get; set; }
 }

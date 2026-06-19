@@ -7,12 +7,14 @@ namespace QuickShell.Commands;
 
 internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
 {
-    private readonly TerminalShortcut _shortcut;
+    private readonly string _shortcutName;
+    private readonly QuickShellSettingsManager _settings;
     private readonly bool _runAsAdmin;
 
-    public OpenTerminalShortcutCommand(TerminalShortcut shortcut, bool runAsAdmin = false)
+    public OpenTerminalShortcutCommand(TerminalShortcut shortcut, QuickShellSettingsManager settings, bool runAsAdmin = false)
     {
-        _shortcut = shortcut;
+        _shortcutName = shortcut.Name;
+        _settings = settings;
         _runAsAdmin = runAsAdmin;
         Name = shortcut.Name;
         Icon = new IconInfo(runAsAdmin || shortcut.RunAsAdmin ? "\uE946" : "\uE756");
@@ -20,14 +22,21 @@ internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
+        var shortcut = ShortcutStore.GetByName(_shortcutName);
+        if (shortcut is null)
+        {
+            return QuickShellNavigation.StayOpen($"Shortcut '{_shortcutName}' was not found.");
+        }
+
         try
         {
-            TerminalLauncher.Open(_shortcut, _runAsAdmin);
+            TerminalLauncher.Open(shortcut, _settings.DefaultLaunchTargetId, _runAsAdmin);
+            ShortcutStore.MarkUsed(_shortcutName);
             return CommandResult.Dismiss();
         }
         catch (Exception ex)
         {
-            return CommandResult.ShowToast($"Failed to open terminal: {ex.Message}");
+            return QuickShellNavigation.StayOpen($"Failed to open terminal: {ex.Message}");
         }
     }
 }

@@ -100,10 +100,11 @@
     <WindowsPackageType>None</WindowsPackageType>
     <EnableMsixTooling>false</EnableMsixTooling>
     <PublishSingleFile>false</PublishSingleFile>
-    <PublishTrimmed>true</PublishTrimmed>
+    <PublishTrimmed>false</PublishTrimmed>
+    <ILLinkTreatWarningsAsErrors>false</ILLinkTreatWarningsAsErrors>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)'!='Debug'">
+  <PropertyGroup Condition="'$(Configuration)'!='Debug' and '$(WinGetBuild)'!='true'">
     <!-- In Release builds, trimming is enabled by default. 
          feel free to disable this if needed -->
     <PublishTrimmed>true</PublishTrimmed>

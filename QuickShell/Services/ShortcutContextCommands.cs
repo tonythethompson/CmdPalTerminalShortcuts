@@ -11,7 +11,7 @@ internal static class ShortcutContextCommands
 {
     private const int HoverOrderElevation = 0;
     private const int HoverOrderEdit = 10;
-    private const int HoverOrderPin = 20;
+    private const int HoverOrderFavorite = 20;
     private const int HoverOrderDuplicate = 30;
     private const int HoverOrderDelete = 50;
     private const int HoverOrderMoveUp = 60;
@@ -43,16 +43,16 @@ internal static class ShortcutContextCommands
 
         AddElevationContextCommand(items, shortcut, settings);
 
-        var pinCommand = new TogglePinShortcutCommand(shortcut.Name, onChanged, shortcut.IsPinned);
+        var favoriteCommand = new ToggleFavoriteShortcutCommand(shortcut.Name, onChanged, shortcut.IsPinned);
         items.Add(WithShortcut(
-            pinCommand,
+            favoriteCommand,
             ctrl: true,
             alt: false,
             shift: false,
             VirtualKey.P,
-            title: pinCommand.Name,
+            title: favoriteCommand.Name,
             showInHoverActions: true,
-            hoverOrder: HoverOrderPin));
+            hoverOrder: HoverOrderFavorite));
 
         var duplicateCommand = new DuplicateShortcutCommand(shortcut.Name, onChanged);
         items.Add(WithShortcut(
@@ -85,7 +85,7 @@ internal static class ShortcutContextCommands
 
         if (shortcut.IsPinned)
         {
-            var moveUpCommand = new MovePinnedShortcutCommand(shortcut.Name, -1, onChanged);
+            var moveUpCommand = new MoveFavoriteShortcutCommand(shortcut.Name, -1, onChanged);
             items.Add(WithShortcut(
                 moveUpCommand,
                 ctrl: true,
@@ -96,7 +96,7 @@ internal static class ShortcutContextCommands
                 showInHoverActions: showMoveUpInHover,
                 hoverOrder: HoverOrderMoveUp));
 
-            var moveDownCommand = new MovePinnedShortcutCommand(shortcut.Name, +1, onChanged);
+            var moveDownCommand = new MoveFavoriteShortcutCommand(shortcut.Name, +1, onChanged);
             items.Add(WithShortcut(
                 moveDownCommand,
                 ctrl: true,
@@ -154,6 +154,17 @@ internal static class ShortcutContextCommands
             var standardCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsStandard: true);
             items.Add(CreateOpenWithoutAdminContextItem(standardCommand, showInHoverActions: true));
         }
+
+        var favoriteCommand = new ToggleFavoriteShortcutCommand(shortcut.Name, onChanged, shortcut.IsPinned);
+        items.Add(WithShortcut(
+            favoriteCommand,
+            ctrl: true,
+            alt: false,
+            shift: false,
+            VirtualKey.P,
+            title: favoriteCommand.Name,
+            showInHoverActions: true,
+            hoverOrder: HoverOrderFavorite));
 
         return items.ToArray();
     }

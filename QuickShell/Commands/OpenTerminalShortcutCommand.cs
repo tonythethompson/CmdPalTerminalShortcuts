@@ -32,7 +32,7 @@ internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
             : runAsStandard
                 ? "Open without administrator"
                 : shortcut.Name;
-        Icon = new IconInfo(runAsAdmin || (shortcut.RunAsAdmin && !runAsStandard) ? "\uE7EF" : "\uE756");
+        Icon = new IconInfo(runAsAdmin || (shortcut.RunAsAdmin && !runAsStandard) ? ShortcutGlyphs.AdminLaunch : ShortcutGlyphs.Terminal);
     }
 
     public override CommandResult Invoke()

@@ -190,7 +190,15 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
     {
         var item = ShortcutListItems.CreateOpen(shortcut, _settings);
 
-        var pinnedIndex = pinnedInOrder.FindIndex(s => s.Name == shortcut.Name);
+        var pinnedIndex = -1;
+        for (var i = 0; i < pinnedInOrder.Count; i++)
+        {
+            if (pinnedInOrder[i].Name == shortcut.Name)
+            {
+                pinnedIndex = i;
+                break;
+            }
+        }
         var showMoveUpInHover = shortcut.IsPinned && pinnedIndex > 0;
         var showMoveDownInHover = shortcut.IsPinned && pinnedIndex >= 0 && pinnedIndex < pinnedInOrder.Count - 1;
 

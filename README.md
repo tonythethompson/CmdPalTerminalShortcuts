@@ -81,6 +81,8 @@ Open the **⋯** menu on any shortcut (or press **Ctrl+K**) for actions like edi
 | --- | --- |
 | Open a saved folder | Search **Quick Shell**, pick a shortcut |
 | Jump straight to a shortcut | Type its **abbreviation** in the root search box (e.g. `api`) |
+| Favorite a shortcut | **⋯** → **Favorite**, or **Ctrl+P** (star badge on favorited items) |
+| Reorder favorites | **⋯** → **Move favorite up** / **Move favorite down** |
 | Reload after editing JSON | Run **Refresh terminals** inside Quick Shell |
 | Back up or move shortcuts | **Export shortcuts** / **Import shortcuts** |
 | Open once as admin | Select a shortcut → **⋯** → **Open as administrator**, or press **Ctrl+Enter** |
@@ -101,6 +103,7 @@ Each shortcut supports these fields in `shortcuts.json`:
 | `Command` | No | Command to run after opening the folder |
 | `Terminal` | No | `wt`, `powershell`, `pwsh`, or `cmd` (default: `wt`) |
 | `RunAsAdmin` | No | `true` to always launch elevated (UAC prompt); also available as a checkbox when editing in Command Palette |
+| `IsPinned` | No | `true` to favorite the shortcut (keeps it at the top of your Quick Shell list) |
 
 Example:
 

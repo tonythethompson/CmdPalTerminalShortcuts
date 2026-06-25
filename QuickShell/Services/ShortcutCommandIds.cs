@@ -11,6 +11,12 @@ internal static class ShortcutCommandIds
     public static string Open(string shortcutId) =>
         OpenPrefix + shortcutId;
 
+    public static string FavoriteToggle(string shortcutName) =>
+        $"com.quickshell.shortcut.favorite.{EncodeNameKey(shortcutName)}";
+
+    private static string EncodeNameKey(string name) =>
+        Convert.ToHexString(Encoding.UTF8.GetBytes(name)).ToLowerInvariant();
+
     public static bool TryParseOpen(string commandId, out string key)
     {
         key = string.Empty;

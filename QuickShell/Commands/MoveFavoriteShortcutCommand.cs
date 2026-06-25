@@ -3,19 +3,19 @@ using QuickShell.Services;
 
 namespace QuickShell.Commands;
 
-internal sealed partial class MovePinnedShortcutCommand : InvokableCommand
+internal sealed partial class MoveFavoriteShortcutCommand : InvokableCommand
 {
     private readonly string _name;
     private readonly int _direction;
     private readonly Action _onChanged;
 
-    public MovePinnedShortcutCommand(string name, int direction, Action onChanged)
+    public MoveFavoriteShortcutCommand(string name, int direction, Action onChanged)
     {
         _name = name;
         _direction = direction;
         _onChanged = onChanged;
 
-        Name = direction < 0 ? "Move up" : "Move down";
+        Name = direction < 0 ? "Move favorite up" : "Move favorite down";
         Icon = new IconInfo(direction < 0 ? "\uE70E" : "\uE70D");
     }
 
@@ -24,10 +24,13 @@ internal sealed partial class MovePinnedShortcutCommand : InvokableCommand
         var moved = ShortcutStore.MovePinned(_name, _direction);
         if (!moved)
         {
-            return QuickShellNavigation.StayOpen("Shortcut cannot be moved further.");
+            return QuickShellNavigation.StayOpen("Favorite cannot be moved further.");
         }
 
         _onChanged();
-        return QuickShellNavigation.StayOpen(_direction < 0 ? $"Moved '{_name}' up." : $"Moved '{_name}' down.");
+        return QuickShellNavigation.StayOpen(
+            _direction < 0
+                ? $"Moved '{_name}' up in favorites."
+                : $"Moved '{_name}' down in favorites.");
     }
 }

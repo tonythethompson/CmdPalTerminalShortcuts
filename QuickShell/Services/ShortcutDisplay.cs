@@ -37,7 +37,7 @@ internal static class ShortcutDisplay
         {
             tags.Add(new Tag(string.Empty)
             {
-                Icon = new IconInfo("\uE735"),
+                Icon = new IconInfo(ShortcutGlyphs.FavoriteFilled),
                 ToolTip = "Favorite",
             });
         }
@@ -46,7 +46,7 @@ internal static class ShortcutDisplay
         {
             tags.Add(new Tag(string.Empty)
             {
-                Icon = new IconInfo("\uEA18"),
+                Icon = new IconInfo(ShortcutGlyphs.AdminShield),
                 ToolTip = "Always run as administrator",
             });
         }

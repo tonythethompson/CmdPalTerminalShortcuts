@@ -4,20 +4,6 @@
 
 Save directories you use every day, pick a terminal, optionally run a command on open (`dotnet run`, `npm run dev`, and so on), and jump there without digging through File Explorer.
 
-## Screenshots
-
-![Quick Shell shortcut list](QuickShell/Assets/Screenshot_1.png)
-
-*Browse saved shortcuts, favorites, and admin badges — plus create, import, and export from one list.*
-
-![Edit shortcut form](QuickShell/Assets/Screenshot_2.png)
-
-*Set the folder path, search keyword, terminal, optional startup command, and always-run-as-admin.*
-
-![Shortcut context menu](QuickShell/Assets/Screenshot_3.png)
-
-*Edit, favorite, duplicate, open elevated, reorder favorites, and more — without leaving Command Palette.*
-
 ---
 
 ## What you can do
@@ -67,7 +53,13 @@ You should see **Quick Shell** with the subtitle *Open saved folders in your ter
 ## Quick start
 
 1. Open Command Palette and search **Quick Shell**
+
+   ![The Quick Shell shortcut list](QuickShell/Assets/Screenshot_1.png)
+
 2. Choose **Create new shortcut**
+
+   ![The shortcut editor](QuickShell/Assets/Screenshot_2.png)
+
 3. Pick a folder, name it, and save
 4. Select the shortcut to open it in your terminal
 
@@ -80,6 +72,10 @@ The app creates this file on first run. You can edit it in any text editor, or m
 ---
 
 ## Everyday usage
+
+Open the **⋯** menu on any shortcut (or press **Ctrl+K**) for actions like edit, favorite, duplicate, and elevated launch:
+
+![Shortcut context menu](QuickShell/Assets/Screenshot_3.png)
 
 | What you want | How |
 | --- | --- |
@@ -104,7 +100,7 @@ Each shortcut supports these fields in `shortcuts.json`:
 | `Abbreviation` | No | Short keyword for root search (e.g. `api`) |
 | `Command` | No | Command to run after opening the folder |
 | `Terminal` | No | `wt`, `powershell`, `pwsh`, or `cmd` (default: `wt`) |
-| `RunAsAdmin` | No | `true` to always launch elevated (UAC prompt) |
+| `RunAsAdmin` | No | `true` to always launch elevated (UAC prompt); also available as a checkbox when editing in Command Palette |
 
 Example:
 

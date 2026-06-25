@@ -42,7 +42,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
         ];
 
         _fallbackPage = new QuickShellFallbackPage(_settingsManager);
-        _fallbacks = [new QuickShellFallback(_fallbackPage)];
+        _fallbacks = [new QuickShellFallback(_fallbackPage, _settingsManager)];
     }
 
     public override ICommandItem[] TopLevelCommands() => _commands;

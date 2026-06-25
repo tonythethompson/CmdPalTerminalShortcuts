@@ -147,13 +147,10 @@ function Install-DevCertificateTrust {
 }
 
 function Get-MsBuildPath {
-    $msbuild = Join-Path ${env:ProgramFiles} 'Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe'
-    if (-not (Test-Path $msbuild)) {
-        $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
-    }
+    $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
 
     if (-not $msbuild -or -not (Test-Path $msbuild)) {
-        throw 'MSBuild not found. Install Visual Studio with Desktop development to build QuickShell against the local CmdPal SDK.'
+        throw 'MSBuild not found. Install Visual Studio with the Desktop development workload (or .NET desktop development).'
     }
 
     return $msbuild
@@ -196,10 +193,10 @@ try {
     $thumbprint = Ensure-DevCertificate
     Install-DevCertificateTrust
 
+    $msbuild = Get-MsBuildPath
     $localToolkit = Join-Path (Split-Path $ProjectRoot -Parent) 'PowerToys\src\modules\cmdpal\extensionsdk\Microsoft.CommandPalette.Extensions.Toolkit\Microsoft.CommandPalette.Extensions.Toolkit.csproj'
     if (Test-Path $localToolkit) {
         Write-Host 'Building local Command Palette SDK (hover APIs)...'
-        $msbuild = Get-MsBuildPath
         & $msbuild $localToolkit /p:Configuration=$Configuration /p:Platform=x64 /t:Build /v:minimal | Out-Host
         if ($LASTEXITCODE -ne 0) {
             throw "Local CmdPal SDK build failed with exit code $LASTEXITCODE"
@@ -214,7 +211,6 @@ Clone/build PowerToys at A:\PowerToys or set UseLocalCmdPalSdk=false only for le
     }
 
     Write-Host "Building signed MSIX ($Configuration|x64)..."
-    $msbuild = Get-MsBuildPath
     & $msbuild (Join-Path $ProjectDir 'QuickShell.csproj') `
         /p:Configuration=$Configuration `
         /p:Platform=x64 `

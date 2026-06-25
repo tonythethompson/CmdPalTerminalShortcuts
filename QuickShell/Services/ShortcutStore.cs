@@ -148,6 +148,20 @@ internal static class ShortcutStore
         return true;
     }
 
+    public static int CountImportNameConflicts(IReadOnlyList<TerminalShortcut> imported)
+    {
+        if (imported.Count == 0)
+        {
+            return 0;
+        }
+
+        var existingNames = GetShortcuts()
+            .Select(s => s.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return imported.Count(shortcut => existingNames.Contains(shortcut.Name));
+    }
+
     public static ShortcutTransferResult ImportMerge(string path)
     {
         if (!TryReadImportFile(path, out var imported, out var error))

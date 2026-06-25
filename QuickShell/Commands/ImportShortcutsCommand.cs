@@ -1,4 +1,6 @@
+using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
+using QuickShell.Pages;
 using QuickShell.Services;
 
 namespace QuickShell.Commands;
@@ -20,6 +22,21 @@ internal sealed partial class ImportShortcutsCommand : InvokableCommand
         if (path is null)
         {
             return QuickShellNavigation.StayOpen("Import cancelled.");
+        }
+
+        if (!ShortcutStore.TryReadImportFile(path, out var imported, out var error))
+        {
+            return QuickShellNavigation.StayOpen(error);
+        }
+
+        var conflicts = ShortcutStore.CountImportNameConflicts(imported);
+        if (conflicts > 0)
+        {
+            ImportConflictState.Set(path, conflicts, imported.Length, _onReload);
+            return CommandResult.GoToPage(new GoToPageArgs
+            {
+                PageId = ImportConflictPage.PageId,
+            });
         }
 
         var result = ShortcutStore.ImportMerge(path);

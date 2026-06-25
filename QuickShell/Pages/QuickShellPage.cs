@@ -88,14 +88,14 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
     private void RefreshItems(string query)
     {
         var shortcuts = ShortcutStore.Search(query).ToArray();
-        var items = new List<IListItem>(shortcuts.Length + 2);
+        var items = new List<IListItem>(shortcuts.Length + 3);
 
         foreach (var shortcut in shortcuts)
         {
             items.Add(BuildShortcutItem(shortcut));
         }
 
-        items.Add(new ListItem(new ShortcutFormPage(onSaved: Reload))
+        items.Add(new ListItem(new CreateShortcutCommand(Reload))
         {
             Title = "Create new shortcut",
             Subtitle = "Directory and optional command",
@@ -113,12 +113,7 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
         items.Add(new ListItem(new ImportShortcutsCommand(Reload))
         {
             Title = "Import shortcuts",
-            Subtitle = "Add shortcuts from a JSON file; duplicates are renamed",
-        });
-        items.Add(new ListItem(new ImportReplaceShortcutsCommand(Reload))
-        {
-            Title = "Import and replace shortcuts",
-            Subtitle = "Replace all shortcuts with a JSON file",
+            Subtitle = "Add shortcuts from a JSON file",
         });
 
         if (!string.IsNullOrWhiteSpace(query) && shortcuts.Length == 0)

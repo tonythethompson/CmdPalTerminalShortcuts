@@ -6,19 +6,38 @@ using System.Text.Json.Nodes;
 
 namespace QuickShell.Pages;
 
-internal sealed partial class ShortcutFormPage : ContentPage
+internal partial class ShortcutFormPage : ContentPage
 {
-    private readonly ShortcutForm _form;
+    private readonly TerminalShortcut? _existing;
+    private readonly Action? _onSaved;
 
     public ShortcutFormPage(TerminalShortcut? existing = null, Action? onSaved = null)
     {
-        _form = new ShortcutForm(existing, onSaved);
+        _existing = existing is null ? null : CloneShortcut(existing);
+        _onSaved = onSaved;
+        Id = existing is null
+            ? $"com.quickshell.shortcut-form.create.{Guid.NewGuid():N}"
+            : $"com.quickshell.shortcut-form.edit.{Guid.NewGuid():N}";
         Icon = new IconInfo("\uE70F");
         Title = existing is null ? "Add shortcut" : $"Edit {existing.Name}";
         Name = existing is null ? "Create" : "Edit";
     }
 
-    public override IContent[] GetContent() => [_form];
+    public override IContent[] GetContent() => [new ShortcutForm(_existing, _onSaved)];
+
+    private static TerminalShortcut CloneShortcut(TerminalShortcut shortcut) => new()
+    {
+        Name = shortcut.Name,
+        Abbreviation = shortcut.Abbreviation,
+        Directory = shortcut.Directory,
+        Command = shortcut.Command,
+        Terminal = shortcut.Terminal,
+        WtProfile = shortcut.WtProfile,
+        RunAsAdmin = shortcut.RunAsAdmin,
+        IsPinned = shortcut.IsPinned,
+        PinOrder = shortcut.PinOrder,
+        LastUsedUtc = shortcut.LastUsedUtc,
+    };
 }
 
 internal sealed partial class ShortcutForm : FormContent
@@ -28,6 +47,8 @@ internal sealed partial class ShortcutForm : FormContent
     private FormDraft _draft = new();
     private FormDraft _baselineDraft = new();
     private string? _autoFilledName;
+    private bool _nameCustomized;
+    private bool _showingDiscardPrompt;
 
     public ShortcutForm(TerminalShortcut? existing, Action? onSaved)
     {
@@ -82,14 +103,14 @@ internal sealed partial class ShortcutForm : FormContent
                   "title": "Paste path",
                   "tooltip": "Paste a folder path from the clipboard into the field above",
                   "data": { "action": "paste" },
-                  "associatedInputs": "none"
+                  "associatedInputs": "auto"
                 },
                 {
                   "type": "Action.Submit",
                   "title": "Browse folder",
                   "tooltip": "Open the Windows folder picker (you can also type or paste a path above)",
                   "data": { "action": "browse" },
-                  "associatedInputs": "none"
+                  "associatedInputs": "auto"
                 }
               ]
             },
@@ -140,6 +161,11 @@ internal sealed partial class ShortcutForm : FormContent
 
     public override CommandResult SubmitForm(string inputs, string data)
     {
+        if (IsDiscardPromptAction(inputs, data))
+        {
+            return HandleDiscardPromptAction(inputs, data);
+        }
+
         if (IsBrowseAction(inputs, data))
         {
             return HandleBrowse(inputs);
@@ -160,6 +186,11 @@ internal sealed partial class ShortcutForm : FormContent
 
     public override CommandResult SubmitForm(string payload)
     {
+        if (IsDiscardPromptAction(payload, null))
+        {
+            return HandleDiscardPromptAction(payload, null);
+        }
+
         if (IsBrowseAction(payload, null))
         {
             return HandleBrowse(payload);
@@ -227,6 +258,11 @@ internal sealed partial class ShortcutForm : FormContent
 
     private bool ShouldAutofillNameFromDirectory()
     {
+        if (_nameCustomized)
+        {
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(_draft.Name))
         {
             return true;
@@ -299,6 +335,11 @@ internal sealed partial class ShortcutForm : FormContent
 
     private CommandResult HandleCancel(string payload)
     {
+        if (_showingDiscardPrompt)
+        {
+            return QuickShellNavigation.ReturnToShortcutsList();
+        }
+
         if (!MergeDraftFromInputs(payload))
         {
             return QuickShellNavigation.StayOpen("Unable to read form values.");
@@ -309,15 +350,65 @@ internal sealed partial class ShortcutForm : FormContent
             return QuickShellNavigation.ReturnToShortcutsList();
         }
 
-        return CommandResult.Confirm(new ConfirmationArgs
+        ShowDiscardPrompt();
+        return CommandResult.KeepOpen();
+    }
+
+    private CommandResult HandleDiscardPromptAction(string inputs, string? data)
+    {
+        var action = TryGetAction(data) ?? TryGetActionFromInputs(inputs);
+
+        if (action == "discard")
         {
-            Title = "Unsaved changes",
-            Description = "Save your changes before leaving?",
-            PrimaryCommand = new SaveShortcutDraftCommand(this)
+            return QuickShellNavigation.ReturnToShortcutsList();
+        }
+
+        if (action == "save")
+        {
+            return SaveCurrentDraft();
+        }
+
+        return QuickShellNavigation.StayOpen("Unable to read form values.");
+    }
+
+    private void ShowDiscardPrompt()
+    {
+        _showingDiscardPrompt = true;
+        TemplateJson = """
+        {
+          "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+          "type": "AdaptiveCard",
+          "version": "1.6",
+          "body": [
             {
-                Name = "Save",
+              "type": "TextBlock",
+              "text": "Unsaved changes",
+              "weight": "Bolder",
+              "size": "Medium"
             },
-        });
+            {
+              "type": "TextBlock",
+              "text": "Save your changes, or discard them and leave?",
+              "wrap": true
+            }
+          ],
+          "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "Save and close",
+              "data": { "action": "save" },
+              "associatedInputs": "none"
+            },
+            {
+              "type": "Action.Submit",
+              "title": "Discard",
+              "data": { "action": "discard" },
+              "associatedInputs": "none"
+            }
+          ]
+        }
+        """;
+        DataJson = "{}";
     }
 
     private CommandResult HandleSave(string payload)
@@ -434,22 +525,45 @@ internal sealed partial class ShortcutForm : FormContent
 
     private void UpdateAutoFilledNameTracking(string mergedName)
     {
-        if (_autoFilledName is null)
-        {
-            return;
-        }
-
-        if (!string.Equals(
+        if (_autoFilledName is not null
+            && !string.Equals(
                 Normalize(mergedName),
                 Normalize(_autoFilledName),
                 StringComparison.OrdinalIgnoreCase))
         {
             _autoFilledName = null;
+            _nameCustomized = true;
+            return;
+        }
+
+        if (_autoFilledName is null
+            && !string.IsNullOrWhiteSpace(mergedName)
+            && !string.IsNullOrWhiteSpace(_draft.Directory))
+        {
+            var derived = DeriveNameFromDirectory(_draft.Directory);
+            if (!string.Equals(
+                    Normalize(mergedName),
+                    Normalize(derived),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                _nameCustomized = true;
+            }
         }
     }
 
     private static string? GetFieldFromPayload(string payload, string field) =>
         JsonNode.Parse(payload)?.AsObject()?[field]?.ToString();
+
+    private bool IsDiscardPromptAction(string inputs, string? data)
+    {
+        if (!_showingDiscardPrompt)
+        {
+            return false;
+        }
+
+        var action = TryGetAction(data) ?? TryGetActionFromInputs(inputs);
+        return action is "save" or "discard";
+    }
 
     private static bool IsBrowseAction(string inputs, string? data) =>
         TryGetAction(data) == "browse" || TryGetActionFromInputs(inputs) == "browse";
@@ -468,15 +582,6 @@ internal sealed partial class ShortcutForm : FormContent
         }
 
         return TryGetActionFromInputs(inputs) == "cancel";
-    }
-
-    private sealed partial class SaveShortcutDraftCommand : InvokableCommand
-    {
-        private readonly ShortcutForm _form;
-
-        public SaveShortcutDraftCommand(ShortcutForm form) => _form = form;
-
-        public override CommandResult Invoke() => _form.SaveCurrentDraft();
     }
 
     private static string? TryGetAction(string? data)

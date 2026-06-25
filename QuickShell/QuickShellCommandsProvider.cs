@@ -9,6 +9,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
 {
     private readonly QuickShellSettingsManager _settingsManager;
     private readonly QuickShellPage _page;
+    private readonly ImportConflictPage _importConflictPage;
     private readonly QuickShellFallbackPage _fallbackPage;
     private readonly ICommandItem[] _commands;
     private readonly IFallbackCommandItem[] _fallbacks;
@@ -23,6 +24,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
         Settings = _settingsManager.Settings;
 
         _page = new QuickShellPage(_settingsManager);
+        _importConflictPage = new ImportConflictPage(ReloadPages);
         _settingsChangedHandler = (_, _) => _page.Reload();
         _settingsManager.SettingsChanged += _settingsChangedHandler;
 
@@ -49,7 +51,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
                     },
                     new CommandContextItem(new ExportShortcutsCommand()),
                     new CommandContextItem(new ImportShortcutsCommand(ReloadPages)),
-                    new CommandContextItem(new ImportReplaceShortcutsCommand(ReloadPages)),
+                    new CommandContextItem(_importConflictPage),
                     new CommandContextItem(settingsPage),
                 ],
             },

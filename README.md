@@ -72,7 +72,7 @@ The app creates this file on first run. You can edit it in any text editor, or m
 | Open a saved folder | Search **Quick Shell**, pick a shortcut |
 | Jump straight to a shortcut | Type its **abbreviation** in the root search box (e.g. `api`) |
 | Reload after editing JSON | Run **Refresh terminals** inside Quick Shell |
-| Back up or move shortcuts | **Export shortcuts** / **Import shortcuts** (merge) or **Import and replace** |
+| Back up or move shortcuts | **Export shortcuts** / **Import shortcuts** |
 | Open once as admin | Select a shortcut → **⋯** → **Open as administrator**, or press **Ctrl+Enter** |
 | Always open as admin | Set `"RunAsAdmin": true` on that shortcut (see below) |
 | Change default terminal | **Quick Shell** → **⋯** → **Quick Shell settings** |

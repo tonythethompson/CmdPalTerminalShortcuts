@@ -43,22 +43,26 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 
     public override void UpdateSearchText(string oldSearch, string newSearch)
     {
-        if (string.IsNullOrEmpty(oldSearch) && string.IsNullOrEmpty(newSearch))
-        {
-            _hasShownInitialList = false;
-            ApplyQuery(string.Empty, immediate: true);
-            return;
-        }
+        var normalized = newSearch ?? string.Empty;
 
         if (!_hasShownInitialList)
         {
             _hasShownInitialList = true;
-            SetSearchNoUpdate(string.Empty);
+            if (!string.IsNullOrEmpty(oldSearch) || !string.IsNullOrEmpty(normalized))
+            {
+                SetSearchNoUpdate(string.Empty);
+            }
+
             ApplyQuery(string.Empty, immediate: true);
             return;
         }
 
-        ApplyQuery(newSearch);
+        if (string.IsNullOrEmpty(oldSearch) && string.IsNullOrEmpty(normalized))
+        {
+            return;
+        }
+
+        ApplyQuery(normalized);
     }
 
     public override IListItem[] GetItems() => WithActionBanners(_items);

@@ -19,7 +19,10 @@ internal static class QuickShellNavigation
     public static CommandResult ReturnToShortcutsList(string? toastMessage = null)
     {
         ShowToast(toastMessage);
-        return CommandResult.GoBack();
+        return CommandResult.GoToPage(new GoToPageArgs
+        {
+            PageId = HomePageId,
+        });
     }
 
     public static CommandResult StayOpen(string? toastMessage = null)
@@ -28,11 +31,8 @@ internal static class QuickShellNavigation
         return CommandResult.KeepOpen();
     }
 
-    public static CommandResult GoBack(string? toastMessage = null)
-    {
-        ShowToast(toastMessage);
-        return CommandResult.GoBack();
-    }
+    public static CommandResult GoBack(string? toastMessage = null) =>
+        ReturnToShortcutsList(toastMessage);
 
     private static void ShowToast(string? toastMessage)
     {

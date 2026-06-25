@@ -127,14 +127,14 @@ internal sealed partial class ShortcutForm : FormContent
                   "title": "Paste path",
                   "tooltip": "Paste a folder path from the clipboard into the field above",
                   "data": { "action": "paste" },
-                  "associatedInputs": "auto"
+                  "associatedInputs": "none"
                 },
                 {
                   "type": "Action.Submit",
                   "title": "Browse folder",
                   "tooltip": "Open the Windows folder picker (you can also type or paste a path above)",
                   "data": { "action": "browse" },
-                  "associatedInputs": "auto"
+                  "associatedInputs": "none"
                 }
               ]
             },
@@ -174,7 +174,7 @@ internal sealed partial class ShortcutForm : FormContent
               "type": "Action.Submit",
               "title": "Cancel",
               "data": { "action": "cancel" },
-              "associatedInputs": "auto"
+              "associatedInputs": "none"
             }
           ]
         }

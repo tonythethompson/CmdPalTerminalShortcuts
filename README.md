@@ -4,6 +4,20 @@
 
 Save directories you use every day, pick a terminal, optionally run a command on open (`dotnet run`, `npm run dev`, and so on), and jump there without digging through File Explorer.
 
+## Screenshots
+
+![Quick Shell shortcut list](QuickShell/Assets/Screenshot_1.png)
+
+*Browse saved shortcuts, favorites, and admin badges — plus create, import, and export from one list.*
+
+![Edit shortcut form](QuickShell/Assets/Screenshot_2.png)
+
+*Set the folder path, search keyword, terminal, optional startup command, and always-run-as-admin.*
+
+![Shortcut context menu](QuickShell/Assets/Screenshot_3.png)
+
+*Edit, favorite, duplicate, open elevated, reorder favorites, and more — without leaving Command Palette.*
+
 ---
 
 ## What you can do

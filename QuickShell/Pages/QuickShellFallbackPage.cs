@@ -66,25 +66,9 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
 
     private ListItem BuildShortcutItem(TerminalShortcut shortcut)
     {
-        var item = new ListItem(new OpenTerminalShortcutCommand(shortcut, _settings))
-        {
-            Title = shortcut.Name,
-            Subtitle = ShortcutDisplay.BuildSubtitle(shortcut),
-        };
-
-        var tags = ShortcutDisplay.BuildTags(shortcut);
-        if (tags is not null)
-        {
-            item.Tags = tags;
-        }
+        var item = ShortcutListItems.CreateOpen(shortcut, _settings);
 
         var moreCommands = new List<CommandContextItem>(ShortcutContextCommands.Build(shortcut, Reload, _settings, includeEdit: false));
-
-        if (!shortcut.RunAsAdmin)
-        {
-            var adminCommand = new OpenTerminalShortcutCommand(shortcut, _settings, runAsAdmin: true);
-            moreCommands.Insert(0, ShortcutContextCommands.CreateOpenAsAdminContextItem(adminCommand));
-        }
 
         item.MoreCommands = moreCommands.ToArray();
         return item;

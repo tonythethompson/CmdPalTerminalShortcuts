@@ -23,10 +23,16 @@ internal partial class ShortcutFormPage : ContentPage
         Name = existing is null ? "Create" : "Edit";
     }
 
-    public override IContent[] GetContent() => [new ShortcutForm(_existing, _onSaved)];
+    public override IContent[] GetContent() =>
+        [_form ??= new ShortcutForm(_existing, _onSaved, ReleaseForm)];
+
+    private ShortcutForm? _form;
+
+    private void ReleaseForm() => _form = null;
 
     private static TerminalShortcut CloneShortcut(TerminalShortcut shortcut) => new()
     {
+        Id = shortcut.Id,
         Name = shortcut.Name,
         Abbreviation = shortcut.Abbreviation,
         Directory = shortcut.Directory,
@@ -44,16 +50,20 @@ internal sealed partial class ShortcutForm : FormContent
 {
     private readonly string? _originalName;
     private readonly Action? _onSaved;
+    private readonly Action? _releaseForm;
     private FormDraft _draft = new();
     private FormDraft _baselineDraft = new();
     private string? _autoFilledName;
     private bool _nameCustomized;
     private bool _showingDiscardPrompt;
+    private bool _baselineReady;
+    private bool _showRestoredDraftNote;
 
-    public ShortcutForm(TerminalShortcut? existing, Action? onSaved)
+    public ShortcutForm(TerminalShortcut? existing, Action? onSaved, Action? releaseForm = null)
     {
         _originalName = existing?.Name;
         _onSaved = onSaved;
+        _releaseForm = releaseForm;
 
         var launchTarget = TerminalCatalog.EncodeLaunchTargetId(existing ?? new TerminalShortcut());
         var terminalChoices = TerminalCatalog.BuildFormChoicesJson(includeDefaultChoice: true);
@@ -69,6 +79,14 @@ internal sealed partial class ShortcutForm : FormContent
               "id": "OriginalName",
               "isVisible": false,
               "value": "${OriginalName}"
+            },
+            {
+              "type": "TextBlock",
+              "text": "Restored unsaved changes from your last edit. Save or Cancel when you are done.",
+              "wrap": true,
+              "isSubtle": true,
+              "spacing": "Small",
+              "$when": "${ShowRestoredDraftNote}"
             },
             {
               "type": "Input.Text",
@@ -129,6 +147,15 @@ internal sealed partial class ShortcutForm : FormContent
               "value": "${LaunchTarget}",
               "choices": {{terminalChoices}},
               "spacing": "Medium"
+            },
+            {
+              "type": "Input.Toggle",
+              "id": "RunAsAdmin",
+              "title": "Always run as administrator",
+              "value": "${RunAsAdmin}",
+              "valueOn": "true",
+              "valueOff": "false",
+              "spacing": "Medium"
             }
           ],
           "actions": [
@@ -155,12 +182,58 @@ internal sealed partial class ShortcutForm : FormContent
             Directory = existing?.Directory ?? string.Empty,
             Command = existing?.Command ?? string.Empty,
             LaunchTarget = launchTarget,
-        });
+            RunAsAdmin = existing?.RunAsAdmin ?? false,
+        }, persist: false);
         _baselineDraft = CloneDraft(_draft);
+        _baselineReady = true;
+        TryRestoreEditDraft();
+    }
+
+    private void CaptureInputs(string payload)
+    {
+        if (!_baselineReady || _showingDiscardPrompt)
+        {
+            return;
+        }
+
+        if (MergeDraftFromInputs(payload))
+        {
+            PersistEditDraftIfNeeded();
+        }
+    }
+
+    private void TryRestoreEditDraft()
+    {
+        if (_originalName is null)
+        {
+            return;
+        }
+
+        if (!ShortcutFormDraftStore.TryGetForRestore(_originalName, out var persisted))
+        {
+            return;
+        }
+
+        var restored = ShortcutFormDraftData.FromPersisted(persisted);
+        _showRestoredDraftNote = true;
+        ApplyDraft(new FormDraft
+        {
+            OriginalName = restored.OriginalName,
+            Name = restored.Name,
+            Abbreviation = restored.Abbreviation,
+            Directory = restored.Directory,
+            Command = restored.Command,
+            LaunchTarget = restored.LaunchTarget,
+            RunAsAdmin = persisted.RunAsAdmin,
+        });
+        _nameCustomized = persisted.NameCustomized;
+        _autoFilledName = persisted.AutoFilledName;
     }
 
     public override CommandResult SubmitForm(string inputs, string data)
     {
+        CaptureInputs(inputs);
+
         if (IsDiscardPromptAction(inputs, data))
         {
             return HandleDiscardPromptAction(inputs, data);
@@ -186,6 +259,8 @@ internal sealed partial class ShortcutForm : FormContent
 
     public override CommandResult SubmitForm(string payload)
     {
+        CaptureInputs(payload);
+
         if (IsDiscardPromptAction(payload, null))
         {
             return HandleDiscardPromptAction(payload, null);
@@ -258,14 +333,15 @@ internal sealed partial class ShortcutForm : FormContent
 
     private bool ShouldAutofillNameFromDirectory()
     {
+        if (string.IsNullOrWhiteSpace(_draft.Name))
+        {
+            _nameCustomized = false;
+            return true;
+        }
+
         if (_nameCustomized)
         {
             return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(_draft.Name))
-        {
-            return true;
         }
 
         if (_autoFilledName is null)
@@ -337,7 +413,7 @@ internal sealed partial class ShortcutForm : FormContent
     {
         if (_showingDiscardPrompt)
         {
-            return QuickShellNavigation.ReturnToShortcutsList();
+            return LeaveShortcutForm();
         }
 
         if (!MergeDraftFromInputs(payload))
@@ -347,9 +423,11 @@ internal sealed partial class ShortcutForm : FormContent
 
         if (!HasUnsavedChanges())
         {
-            return QuickShellNavigation.ReturnToShortcutsList();
+            ShortcutFormDraftStore.Clear();
+            return LeaveShortcutForm();
         }
 
+        PersistEditDraftIfNeeded();
         ShowDiscardPrompt();
         return CommandResult.KeepOpen();
     }
@@ -360,7 +438,8 @@ internal sealed partial class ShortcutForm : FormContent
 
         if (action == "discard")
         {
-            return QuickShellNavigation.ReturnToShortcutsList();
+            ShortcutFormDraftStore.Clear();
+            return LeaveShortcutForm();
         }
 
         if (action == "save")
@@ -424,58 +503,41 @@ internal sealed partial class ShortcutForm : FormContent
     private CommandResult SaveCurrentDraft()
     {
         var draft = _draft;
+        var originalName = string.IsNullOrWhiteSpace(draft.OriginalName) ? _originalName : draft.OriginalName;
 
-        if (string.IsNullOrWhiteSpace(draft.Directory))
-        {
-            return QuickShellNavigation.StayOpen("Folder path is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(draft.Name))
+        if (string.IsNullOrWhiteSpace(draft.Name) && !string.IsNullOrWhiteSpace(draft.Directory))
         {
             draft.Name = DeriveNameFromDirectory(draft.Directory);
             _autoFilledName = draft.Name;
         }
 
-        if (string.IsNullOrWhiteSpace(draft.Name))
+        var result = ShortcutFormSave.TrySave(
+            originalName,
+            draft.Name,
+            draft.Abbreviation,
+            draft.Directory,
+            draft.Command,
+            draft.LaunchTarget,
+            draft.RunAsAdmin,
+            _onSaved);
+
+        if (!result.Success)
         {
-            return QuickShellNavigation.StayOpen("Name is required.");
+            PersistEditDraftIfNeeded();
+            return QuickShellNavigation.StayOpen(result.Message);
         }
 
-        var shortcut = new TerminalShortcut
-        {
-            Name = draft.Name.Trim(),
-            Abbreviation = string.IsNullOrWhiteSpace(draft.Abbreviation) ? null : draft.Abbreviation.Trim(),
-            Directory = draft.Directory.Trim(),
-            Command = string.IsNullOrWhiteSpace(draft.Command) ? null : draft.Command,
-        };
-
-        TerminalCatalog.ApplyLaunchTargetId(shortcut, draft.LaunchTarget);
-
-        if (!ShortcutValidation.TryValidate(shortcut, out var validationError))
-        {
-            return QuickShellNavigation.StayOpen(validationError);
-        }
-
-        var originalName = string.IsNullOrWhiteSpace(draft.OriginalName) ? _originalName : draft.OriginalName;
-
-        if (!ShortcutValidation.TryValidateUniqueName(shortcut.Name, originalName, out validationError))
-        {
-            return QuickShellNavigation.StayOpen(validationError);
-        }
-
-        try
-        {
-            ShortcutStore.Upsert(shortcut, originalName);
-            _onSaved?.Invoke();
-            return QuickShellNavigation.ReturnToShortcutsList($"Saved shortcut '{shortcut.Name}'.");
-        }
-        catch (Exception ex)
-        {
-            return QuickShellNavigation.StayOpen($"Failed to save shortcut: {ex.Message}");
-        }
+        ShortcutFormDraftStore.Clear();
+        return LeaveShortcutForm(result.Message);
     }
 
-    private void ApplyDraft(FormDraft draft)
+    private CommandResult LeaveShortcutForm(string? toastMessage = null)
+    {
+        _releaseForm?.Invoke();
+        return QuickShellNavigation.ReturnToShortcutsList(toastMessage);
+    }
+
+    private void ApplyDraft(FormDraft draft, bool persist = true)
     {
         _draft = draft;
         DataJson = $$"""
@@ -485,10 +547,44 @@ internal sealed partial class ShortcutForm : FormContent
           "Abbreviation": "{{Escape(draft.Abbreviation)}}",
           "Directory": "{{Escape(draft.Directory)}}",
           "Command": "{{Escape(draft.Command)}}",
-          "LaunchTarget": "{{Escape(draft.LaunchTarget)}}"
+          "LaunchTarget": "{{Escape(draft.LaunchTarget)}}",
+          "RunAsAdmin": "{{(draft.RunAsAdmin ? "true" : "false")}}",
+          "ShowRestoredDraftNote": {{(_showRestoredDraftNote ? "true" : "false")}}
         }
         """;
+
+        if (persist && _baselineReady)
+        {
+            PersistEditDraftIfNeeded();
+        }
     }
+
+    private void PersistEditDraftIfNeeded()
+    {
+        if (_originalName is null || _showingDiscardPrompt)
+        {
+            return;
+        }
+
+        ShortcutFormDraftStore.SaveIfDirty(
+            _originalName,
+            ToDraftData(_draft),
+            ToDraftData(_baselineDraft),
+            _nameCustomized,
+            _autoFilledName);
+    }
+
+    private static ShortcutFormDraftData ToDraftData(FormDraft draft) =>
+        new()
+        {
+            OriginalName = draft.OriginalName,
+            Name = draft.Name,
+            Abbreviation = draft.Abbreviation,
+            Directory = draft.Directory,
+            Command = draft.Command,
+            LaunchTarget = draft.LaunchTarget,
+            RunAsAdmin = draft.RunAsAdmin,
+        };
 
     private bool HasUnsavedChanges() => !DraftEquals(_draft, _baselineDraft);
 
@@ -518,6 +614,7 @@ internal sealed partial class ShortcutForm : FormContent
                 : data["Directory"]?.ToString() ?? _draft.Directory,
             Command = data["Command"]?.ToString() ?? _draft.Command,
             LaunchTarget = data["LaunchTarget"]?.ToString() ?? _draft.LaunchTarget,
+            RunAsAdmin = ParseToggleBool(data["RunAsAdmin"]?.ToString(), _draft.RunAsAdmin),
         };
 
         return true;
@@ -525,6 +622,13 @@ internal sealed partial class ShortcutForm : FormContent
 
     private void UpdateAutoFilledNameTracking(string mergedName)
     {
+        if (string.IsNullOrWhiteSpace(mergedName))
+        {
+            _nameCustomized = false;
+            _autoFilledName = null;
+            return;
+        }
+
         if (_autoFilledName is not null
             && !string.Equals(
                 Normalize(mergedName),
@@ -603,6 +707,7 @@ internal sealed partial class ShortcutForm : FormContent
             Directory = draft.Directory,
             Command = draft.Command,
             LaunchTarget = draft.LaunchTarget,
+            RunAsAdmin = draft.RunAsAdmin,
         };
 
     private static bool DraftEquals(FormDraft left, FormDraft right) =>
@@ -610,7 +715,8 @@ internal sealed partial class ShortcutForm : FormContent
         && string.Equals(Normalize(left.Abbreviation), Normalize(right.Abbreviation), StringComparison.Ordinal)
         && string.Equals(Normalize(left.Directory), Normalize(right.Directory), StringComparison.Ordinal)
         && string.Equals(Normalize(left.Command), Normalize(right.Command), StringComparison.Ordinal)
-        && string.Equals(Normalize(left.LaunchTarget), Normalize(right.LaunchTarget), StringComparison.Ordinal);
+        && string.Equals(Normalize(left.LaunchTarget), Normalize(right.LaunchTarget), StringComparison.Ordinal)
+        && left.RunAsAdmin == right.RunAsAdmin;
 
     private static string Normalize(string? value) => (value ?? string.Empty).Trim();
 
@@ -629,5 +735,15 @@ internal sealed partial class ShortcutForm : FormContent
         public string Command { get; set; } = string.Empty;
 
         public string LaunchTarget { get; set; } = "default";
+
+        public bool RunAsAdmin { get; set; }
     }
+
+    private static bool ParseToggleBool(string? value, bool fallback) =>
+        value switch
+        {
+            "true" => true,
+            "false" => false,
+            _ => fallback,
+        };
 }

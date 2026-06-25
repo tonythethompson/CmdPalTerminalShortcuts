@@ -7,31 +7,46 @@ namespace QuickShell.Commands;
 
 internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
 {
-    private readonly string _shortcutName;
+    private readonly string _shortcutId;
     private readonly QuickShellSettingsManager _settings;
     private readonly bool _runAsAdmin;
+    private readonly bool _runAsStandard;
 
-    public OpenTerminalShortcutCommand(TerminalShortcut shortcut, QuickShellSettingsManager settings, bool runAsAdmin = false)
+    public OpenTerminalShortcutCommand(
+        TerminalShortcut shortcut,
+        QuickShellSettingsManager settings,
+        bool runAsAdmin = false,
+        bool runAsStandard = false)
     {
-        _shortcutName = shortcut.Name;
+        _shortcutId = shortcut.Id;
         _settings = settings;
         _runAsAdmin = runAsAdmin;
-        Name = runAsAdmin ? "Open as administrator" : shortcut.Name;
-        Icon = new IconInfo(runAsAdmin || shortcut.RunAsAdmin ? "\uE946" : "\uE756");
+        _runAsStandard = runAsStandard;
+        Id = runAsAdmin
+            ? $"{ShortcutCommandIds.Open(shortcut.Id)}.admin"
+            : runAsStandard
+                ? $"{ShortcutCommandIds.Open(shortcut.Id)}.standard"
+                : ShortcutCommandIds.Open(shortcut.Id);
+        Name = runAsAdmin
+            ? "Open as administrator"
+            : runAsStandard
+                ? "Open without administrator"
+                : shortcut.Name;
+        Icon = new IconInfo(runAsAdmin || (shortcut.RunAsAdmin && !runAsStandard) ? "\uE7EF" : "\uE756");
     }
 
     public override CommandResult Invoke()
     {
-        var shortcut = ShortcutStore.GetByName(_shortcutName);
+        var shortcut = ShortcutStore.GetById(_shortcutId);
         if (shortcut is null)
         {
-            return QuickShellNavigation.StayOpen($"Shortcut '{_shortcutName}' was not found.");
+            return QuickShellNavigation.StayOpen("That shortcut was not found.");
         }
 
         try
         {
-            TerminalLauncher.Open(shortcut, _settings.DefaultLaunchTargetId, _runAsAdmin);
-            ShortcutStore.MarkUsed(_shortcutName);
+            TerminalLauncher.Open(shortcut, _settings.DefaultLaunchTargetId, _runAsAdmin, _runAsStandard);
+            ShortcutStore.MarkUsed(shortcut.Id);
             return CommandResult.Dismiss();
         }
         catch (Exception ex)

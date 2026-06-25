@@ -35,12 +35,20 @@ internal static class ShortcutDisplay
         var tags = new List<Tag>();
         if (shortcut.IsPinned)
         {
-            tags.Add(new Tag("Pinned"));
+            tags.Add(new Tag(string.Empty)
+            {
+                Icon = new IconInfo("\uE718"),
+                ToolTip = "Pinned to top",
+            });
         }
 
         if (shortcut.RunAsAdmin)
         {
-            tags.Add(new Tag("Admin"));
+            tags.Add(new Tag(string.Empty)
+            {
+                Icon = new IconInfo("\uEA18"),
+                ToolTip = "Always run as administrator",
+            });
         }
 
         return tags.Count == 0 ? null : tags.ToArray();

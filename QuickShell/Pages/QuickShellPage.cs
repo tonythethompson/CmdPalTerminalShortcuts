@@ -9,14 +9,24 @@ namespace QuickShell.Pages;
 internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 {
     private readonly QuickShellSettingsManager _settings;
+    private readonly ImportConflictPage _importConflictPage;
+    private readonly PendingShortcutEditPage _pendingShortcutEditPage;
+    private readonly CreateShortcutCommand _createShortcutCommand;
     private readonly SearchDebouncer _searchDebouncer;
     private IListItem[] _items = [];
     private string _query = string.Empty;
     private bool _hasShownInitialList;
 
-    public QuickShellPage(QuickShellSettingsManager settings)
+    public QuickShellPage(
+        QuickShellSettingsManager settings,
+        ImportConflictPage importConflictPage,
+        PendingShortcutEditPage pendingShortcutEditPage,
+        CreateShortcutCommand createShortcutCommand)
     {
         _settings = settings;
+        _importConflictPage = importConflictPage;
+        _pendingShortcutEditPage = pendingShortcutEditPage;
+        _createShortcutCommand = createShortcutCommand;
         _searchDebouncer = new SearchDebouncer(ApplyQueryDebounced);
         Id = QuickShellNavigation.HomePageId;
         Icon = new IconInfo("\uE756");
@@ -46,7 +56,51 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
         ApplyQuery(newSearch);
     }
 
-    public override IListItem[] GetItems() => _items;
+    public override IListItem[] GetItems() => WithActionBanners(_items);
+
+    private IListItem[] WithActionBanners(IListItem[] items)
+    {
+        var list = items
+            .Where(item => !IsActionBanner(item))
+            .ToList();
+
+        var insertAt = 0;
+
+        if (ImportConflictState.Pending is { } pending)
+        {
+            list.Insert(insertAt++, BuildImportConflictBanner(pending));
+        }
+
+        if (ShortcutFormDraftStore.HasPending && ShortcutFormDraftStore.Pending is { } editDraft)
+        {
+            list.Insert(insertAt, BuildPendingEditBanner(editDraft));
+        }
+
+        return list.ToArray();
+    }
+
+    private static bool IsActionBanner(IListItem item) =>
+        string.Equals(item.Command?.Id, ImportConflictPage.PageId, StringComparison.Ordinal)
+        || string.Equals(item.Command?.Id, PendingShortcutEditPage.PageId, StringComparison.Ordinal);
+
+    private ListItem BuildImportConflictBanner(ImportConflictState.PendingImport pending) =>
+        new(_importConflictPage)
+        {
+            Title = "Finish importing shortcuts",
+            Subtitle =
+                $"{pending.ConflictCount} duplicate name(s) in file — choose merge or replace to continue",
+            Icon = new IconInfo("\uE7BA"),
+            Tags = [new Tag("Action required")],
+        };
+
+    private ListItem BuildPendingEditBanner(PersistedShortcutEditDraft editDraft) =>
+        new(_pendingShortcutEditPage)
+        {
+            Title = "Unsaved shortcut changes",
+            Subtitle = $"Editing \"{editDraft.OriginalName}\" — save or discard to continue",
+            Icon = new IconInfo("\uE70F"),
+            Tags = [new Tag("Action required")],
+        };
 
     public void Reload()
     {
@@ -88,18 +142,14 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
     private void RefreshItems(string query)
     {
         var shortcuts = ShortcutStore.Search(query).ToArray();
-        var items = new List<IListItem>(shortcuts.Length + 3);
+        var items = new List<IListItem>(shortcuts.Length + 4);
 
         foreach (var shortcut in shortcuts)
         {
             items.Add(BuildShortcutItem(shortcut));
         }
 
-        items.Add(new ListItem(new CreateShortcutCommand(Reload))
-        {
-            Title = "Create new shortcut",
-            Subtitle = "Directory and optional command",
-        });
+        items.Add(ShortcutListItems.CreateNewShortcut(_createShortcutCommand));
         items.Add(new ListItem(new ReloadShortcutsCommand(Reload))
         {
             Title = "Refresh terminals",
@@ -131,25 +181,9 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 
     private ListItem BuildShortcutItem(TerminalShortcut shortcut)
     {
-        var item = new ListItem(new OpenTerminalShortcutCommand(shortcut, _settings))
-        {
-            Title = shortcut.Name,
-            Subtitle = ShortcutDisplay.BuildSubtitle(shortcut),
-        };
-
-        var tags = ShortcutDisplay.BuildTags(shortcut);
-        if (tags is not null)
-        {
-            item.Tags = tags;
-        }
+        var item = ShortcutListItems.CreateOpen(shortcut, _settings);
 
         var moreCommands = new List<CommandContextItem>(ShortcutContextCommands.Build(shortcut, Reload, _settings));
-
-        if (!shortcut.RunAsAdmin)
-        {
-            var adminCommand = new OpenTerminalShortcutCommand(shortcut, _settings, runAsAdmin: true);
-            moreCommands.Insert(0, ShortcutContextCommands.CreateOpenAsAdminContextItem(adminCommand));
-        }
 
         item.MoreCommands = moreCommands.ToArray();
         return item;

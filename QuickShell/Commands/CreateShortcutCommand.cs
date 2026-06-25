@@ -1,4 +1,5 @@
 using QuickShell.Pages;
+using QuickShell.Services;
 
 namespace QuickShell.Commands;
 
@@ -11,5 +12,6 @@ internal sealed partial class CreateShortcutCommand : ShortcutFormPage
     public CreateShortcutCommand(Action onSaved)
         : base(existing: null, onSaved)
     {
+        Id = ShortcutCommandIds.CreateShortcut;
     }
 }

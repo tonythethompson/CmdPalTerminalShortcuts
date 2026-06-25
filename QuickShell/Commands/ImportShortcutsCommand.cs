@@ -13,7 +13,7 @@ internal sealed partial class ImportShortcutsCommand : InvokableCommand
     {
         _onReload = onReload;
         Name = "Import shortcuts";
-        Icon = new IconInfo("\uE8B5");
+        Icon = new IconInfo("\uE898");
     }
 
     public override CommandResult Invoke()
@@ -33,6 +33,7 @@ internal sealed partial class ImportShortcutsCommand : InvokableCommand
         if (conflicts > 0)
         {
             ImportConflictState.Set(path, conflicts, imported.Length, _onReload);
+            _onReload();
             return CommandResult.GoToPage(new GoToPageArgs
             {
                 PageId = ImportConflictPage.PageId,

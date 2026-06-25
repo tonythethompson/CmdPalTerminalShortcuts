@@ -66,12 +66,6 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
         var moreCommands = new List<CommandContextItem>(
             ShortcutContextCommands.Build(shortcut, ReloadListPage, _settings, includeEdit: false));
 
-        if (!shortcut.RunAsAdmin)
-        {
-            var adminCommand = new OpenTerminalShortcutCommand(shortcut, _settings, runAsAdmin: true);
-            moreCommands.Insert(0, ShortcutContextCommands.CreateOpenAsAdminContextItem(adminCommand));
-        }
-
         MoreCommands = moreCommands.ToArray();
     }
 

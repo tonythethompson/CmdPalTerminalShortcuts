@@ -63,6 +63,42 @@ internal static class ShortcutStore
         }
     }
 
+    public static TerminalShortcut? GetById(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        lock (Sync)
+        {
+            EnsureLoaded();
+            var shortcut = _shortcuts.FirstOrDefault(s => s.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            return shortcut is null ? null : Clone(shortcut);
+        }
+    }
+
+    public static TerminalShortcut? ResolveForOpenCommand(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        var byId = GetById(key);
+        if (byId is not null)
+        {
+            return byId;
+        }
+
+        if (ShortcutCommandIds.TryDecodeLegacyNameKey(key, out var legacyName))
+        {
+            return GetByName(legacyName);
+        }
+
+        return null;
+    }
+
     public static void Reload()
     {
         lock (Sync)
@@ -203,6 +239,7 @@ internal static class ShortcutStore
                 }
 
                 existingNames.Add(shortcut.Name);
+                AssignShortcutId(shortcut, list);
 
                 if (shortcut.IsPinned && shortcut.PinOrder is null)
                 {
@@ -379,9 +416,14 @@ internal static class ShortcutStore
 
             if (existing is not null)
             {
+                shortcut.Id = existing.Id;
                 shortcut.IsPinned = existing.IsPinned;
                 shortcut.PinOrder = existing.PinOrder;
                 shortcut.LastUsedUtc = existing.LastUsedUtc;
+            }
+            else
+            {
+                AssignShortcutId(shortcut, list);
             }
 
             if (!string.IsNullOrWhiteSpace(originalName))
@@ -499,9 +541,9 @@ internal static class ShortcutStore
         }
     }
 
-    public static void MarkUsed(string name)
+    public static void MarkUsed(string shortcutId)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (string.IsNullOrWhiteSpace(shortcutId))
         {
             return;
         }
@@ -511,7 +553,7 @@ internal static class ShortcutStore
             EnsureLoaded();
 
             var list = _shortcuts.Select(Clone).ToList();
-            var shortcut = list.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            var shortcut = list.FirstOrDefault(s => s.Id.Equals(shortcutId, StringComparison.OrdinalIgnoreCase));
             if (shortcut is null)
             {
                 return;
@@ -538,6 +580,7 @@ internal static class ShortcutStore
         }
 
         var copy = Clone(source);
+        copy.Id = Guid.NewGuid().ToString("N");
         copy.Name = GetDuplicateName(copy.Name);
         copy.IsPinned = false;
         copy.PinOrder = null;
@@ -584,6 +627,13 @@ internal static class ShortcutStore
             _shortcuts = loaded;
             _lastGoodShortcuts = CloneAll(_shortcuts);
             _lastWriteTimeUtc = writeTime;
+
+            if (AssignMissingShortcutIds(_shortcuts))
+            {
+                WriteShortcutsAtomic(_shortcuts);
+                _lastGoodShortcuts = CloneAll(_shortcuts);
+                _lastWriteTimeUtc = File.GetLastWriteTimeUtc(ConfigPath);
+            }
         }
         catch
         {
@@ -703,7 +753,8 @@ internal static class ShortcutStore
     private static void SaveLocked(IReadOnlyCollection<TerminalShortcut> shortcuts)
     {
         Directory.CreateDirectory(ConfigDirectory);
-        var ordered = OrderForDisplay(shortcuts.Where(IsValidShortcut).Select(Normalize).Select(Clone));
+        var ordered = OrderForDisplay(shortcuts.Where(IsValidShortcut).Select(Normalize).Select(Clone)).ToArray();
+        AssignMissingShortcutIds(ordered);
         WriteShortcutsAtomic(ordered);
         _shortcuts = ordered;
         _lastGoodShortcuts = CloneAll(ordered);
@@ -810,10 +861,28 @@ internal static class ShortcutStore
         }
     }
 
-    private static string GetDuplicateName(string sourceName)
+    private static string GetDuplicateName(string sourceName) =>
+        ResolveAvailableName(sourceName);
+
+    public static string ResolveAvailableName(string desiredName, string? replacingOriginalName = null)
     {
-        var existingNames = GetShortcuts().Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return GetUniqueName(sourceName, existingNames);
+        var trimmed = desiredName.Trim();
+        var existingNames = GetShortcuts()
+            .Select(s => s.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(replacingOriginalName))
+        {
+            var toRemove = existingNames
+                .Where(name => name.Equals(replacingOriginalName, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            foreach (var name in toRemove)
+            {
+                existingNames.Remove(name);
+            }
+        }
+
+        return GetUniqueName(trimmed, existingNames);
     }
 
     private static string GetUniqueName(string sourceName, HashSet<string> existingNames)
@@ -861,6 +930,43 @@ internal static class ShortcutStore
 
     private static bool IsValidShortcut(TerminalShortcut shortcut) =>
         !string.IsNullOrWhiteSpace(shortcut.Name) && !string.IsNullOrWhiteSpace(shortcut.Directory);
+
+    private static bool AssignMissingShortcutIds(TerminalShortcut[] shortcuts)
+    {
+        var usedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var changed = false;
+
+        foreach (var shortcut in shortcuts)
+        {
+            if (!string.IsNullOrWhiteSpace(shortcut.Id) && usedIds.Add(shortcut.Id))
+            {
+                continue;
+            }
+
+            AssignShortcutId(shortcut, usedIds);
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static void AssignShortcutId(TerminalShortcut shortcut, IEnumerable<TerminalShortcut> existing)
+    {
+        var usedIds = existing
+            .Where(s => !string.IsNullOrWhiteSpace(s.Id))
+            .Select(s => s.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        AssignShortcutId(shortcut, usedIds);
+    }
+
+    private static void AssignShortcutId(TerminalShortcut shortcut, HashSet<string> usedIds)
+    {
+        do
+        {
+            shortcut.Id = Guid.NewGuid().ToString("N");
+        }
+        while (!usedIds.Add(shortcut.Id));
+    }
 
     private static bool Matches(TerminalShortcut shortcut, string query)
     {
@@ -966,6 +1072,7 @@ internal static class ShortcutStore
     }
 
     private static bool ShortcutEquals(TerminalShortcut left, TerminalShortcut right) =>
+        string.Equals(left.Id, right.Id, StringComparison.Ordinal) &&
         string.Equals(left.Name, right.Name, StringComparison.Ordinal) &&
         string.Equals(left.Abbreviation, right.Abbreviation, StringComparison.Ordinal) &&
         string.Equals(left.Directory, right.Directory, StringComparison.Ordinal) &&
@@ -979,6 +1086,7 @@ internal static class ShortcutStore
 
     private static TerminalShortcut Clone(TerminalShortcut shortcut) => new()
     {
+        Id = shortcut.Id,
         Name = shortcut.Name,
         Abbreviation = shortcut.Abbreviation,
         Directory = shortcut.Directory,

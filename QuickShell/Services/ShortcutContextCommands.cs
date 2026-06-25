@@ -29,6 +29,8 @@ internal static class ShortcutContextCommands
                 title: editPage.Title));
         }
 
+        AddElevationContextCommand(items, shortcut, settings);
+
         var pinCommand = new TogglePinShortcutCommand(shortcut.Name, onChanged, shortcut.IsPinned);
         items.Add(WithShortcut(
             pinCommand,
@@ -99,6 +101,67 @@ internal static class ShortcutContextCommands
         return items.ToArray();
     }
 
+    public static CommandContextItem[] BuildForHomePin(
+        TerminalShortcut shortcut,
+        Action onChanged,
+        QuickShellSettingsManager settings)
+    {
+        var items = new List<CommandContextItem>();
+
+        var editPage = new ShortcutFormPage(shortcut, onChanged);
+        items.Add(new CommandContextItem(editPage)
+        {
+            Title = editPage.Title,
+            RequestedShortcut = KeyChordHelpers.FromModifiers(
+                ctrl: true,
+                alt: false,
+                shift: false,
+                win: false,
+                vkey: VirtualKey.E),
+        });
+
+        if (!shortcut.RunAsAdmin)
+        {
+            var adminCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsAdmin: true);
+            items.Add(CreateOpenAsAdminContextItem(adminCommand));
+        }
+        else
+        {
+            var standardCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsStandard: true);
+            items.Add(CreateOpenWithoutAdminContextItem(standardCommand));
+        }
+
+        return items.ToArray();
+    }
+
+    public static void AddElevationContextCommand(
+        IList<CommandContextItem> items,
+        TerminalShortcut shortcut,
+        QuickShellSettingsManager settings,
+        bool insertAtStart = true)
+    {
+        CommandContextItem contextItem;
+        if (shortcut.RunAsAdmin)
+        {
+            var standardCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsStandard: true);
+            contextItem = CreateOpenWithoutAdminContextItem(standardCommand);
+        }
+        else
+        {
+            var adminCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsAdmin: true);
+            contextItem = CreateOpenAsAdminContextItem(adminCommand);
+        }
+
+        if (insertAtStart)
+        {
+            items.Insert(0, contextItem);
+        }
+        else
+        {
+            items.Add(contextItem);
+        }
+    }
+
     public static CommandContextItem CreateOpenAsAdminContextItem(OpenTerminalShortcutCommand command) =>
         new(command)
         {
@@ -107,6 +170,18 @@ internal static class ShortcutContextCommands
                 ctrl: true,
                 alt: false,
                 shift: false,
+                win: false,
+                vkey: VirtualKey.Enter),
+        };
+
+    public static CommandContextItem CreateOpenWithoutAdminContextItem(OpenTerminalShortcutCommand command) =>
+        new(command)
+        {
+            Title = "Open without administrator",
+            RequestedShortcut = KeyChordHelpers.FromModifiers(
+                ctrl: true,
+                alt: false,
+                shift: true,
                 win: false,
                 vkey: VirtualKey.Enter),
         };

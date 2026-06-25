@@ -8,7 +8,7 @@ internal sealed partial class ExportShortcutsCommand : InvokableCommand
     public ExportShortcutsCommand()
     {
         Name = "Export shortcuts";
-        Icon = new IconInfo("\uE898");
+        Icon = new IconInfo("\uE896");
     }
 
     public override CommandResult Invoke()

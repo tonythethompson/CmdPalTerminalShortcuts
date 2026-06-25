@@ -18,7 +18,7 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
         _settings = settings;
         _searchDebouncer = new SearchDebouncer(ApplyQueryDebounced);
         Icon = new IconInfo("\uE756");
-        Title = "Quick Shell";
+        Title = "Quick Shell shortcuts";
         Name = "Open";
     }
 
@@ -82,7 +82,8 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
 
         if (!shortcut.RunAsAdmin)
         {
-            moreCommands.Insert(0, new CommandContextItem(new OpenTerminalShortcutCommand(shortcut, _settings, runAsAdmin: true))
+            var adminCommand = new OpenTerminalShortcutCommand(shortcut, _settings, runAsAdmin: true);
+            moreCommands.Insert(0, new CommandContextItem(adminCommand)
             {
                 Title = "Open as administrator",
             });

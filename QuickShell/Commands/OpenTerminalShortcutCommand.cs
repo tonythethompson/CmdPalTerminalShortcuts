@@ -16,7 +16,7 @@ internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
         _shortcutName = shortcut.Name;
         _settings = settings;
         _runAsAdmin = runAsAdmin;
-        Name = shortcut.Name;
+        Name = runAsAdmin ? "Open as administrator" : shortcut.Name;
         Icon = new IconInfo(runAsAdmin || shortcut.RunAsAdmin ? "\uE946" : "\uE756");
     }
 

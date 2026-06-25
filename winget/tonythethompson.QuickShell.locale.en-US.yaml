@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
 
 PackageIdentifier: tonythethompson.QuickShell
-PackageVersion: 0.1.2.1
+PackageVersion: 0.1.2.2
 PackageLocale: en-US
 Publisher: Tony Thompson
 PublisherUrl: https://github.com/tonythethompson
@@ -27,10 +27,9 @@ Tags:
 - windows-commandpalette-extension
 - windows-terminal
 ReleaseNotes: |
-  - Restore in-app shortcut create/edit, pin, and settings UI
-  - Preserve shortcuts across updates (recover from .bak and legacy paths)
-  - Fix Inno COM CLSID registry registration
-  - Run as administrator support
-ReleaseNotesUrl: https://github.com/tonythethompson/QuickShell/releases/tag/v0.1.2.1
+  - Fix duplicate Command Palette entry showing a broken icon (fallback command now has icon and clear label)
+  - Show "Open as administrator" in the Ctrl+Enter footer hint
+  - Add accessibility testing guide (ACCESSIBILITY.md)
+ReleaseNotesUrl: https://github.com/tonythethompson/QuickShell/releases/tag/v0.1.2.2
 ManifestType: defaultLocale
 ManifestVersion: 1.9.0

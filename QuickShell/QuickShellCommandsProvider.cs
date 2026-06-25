@@ -33,6 +33,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
             {
                 Title = DisplayName,
                 Subtitle = "Open saved folders in your terminal",
+                Icon = new IconInfo("\uE756"),
                 MoreCommands =
                 [
                     new CommandContextItem(settingsPage),
@@ -41,7 +42,15 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
         ];
 
         _fallbackPage = new QuickShellFallbackPage(_settingsManager);
-        _fallbacks = [new QuickShellFallback(_fallbackPage)];
+        _fallbacks =
+        [
+            new QuickShellFallback(_fallbackPage)
+            {
+                Title = "Quick Shell shortcuts",
+                Subtitle = "Match saved shortcuts from the root search box",
+                Icon = new IconInfo("\uE756"),
+            },
+        ];
     }
 
     public override ICommandItem[] TopLevelCommands() => _commands;

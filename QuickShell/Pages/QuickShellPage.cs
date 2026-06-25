@@ -137,7 +137,8 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 
         if (!shortcut.RunAsAdmin)
         {
-            moreCommands.Insert(0, new CommandContextItem(new OpenTerminalShortcutCommand(shortcut, _settings, runAsAdmin: true))
+            var adminCommand = new OpenTerminalShortcutCommand(shortcut, _settings, runAsAdmin: true);
+            moreCommands.Insert(0, new CommandContextItem(adminCommand)
             {
                 Title = "Open as administrator",
             });

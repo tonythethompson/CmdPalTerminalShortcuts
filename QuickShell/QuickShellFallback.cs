@@ -43,7 +43,7 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
             return;
         }
 
-        _listPage.UpdateSearchText(string.Empty, query);
+        _listPage.UpdateSearchText(string.Empty, _lastQuery);
 
         if (shortcuts.Length == 1)
         {

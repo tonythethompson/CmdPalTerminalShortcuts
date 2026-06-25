@@ -33,6 +33,9 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
         Title = "Quick Shell";
         Name = "Open";
         PlaceholderText = "Search shortcuts by name, path, or command...";
+        HoverActionsMode = HoverActionsMode.Explicit;
+        MaxHoverActions = -1;
+        HoverActionsVisibility = HoverActionsVisibility.HoverOrSelected;
         RefreshItems(string.Empty);
     }
 
@@ -142,11 +145,15 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
     private void RefreshItems(string query)
     {
         var shortcuts = ShortcutStore.Search(query).ToArray();
+        var pinnedInOrder = shortcuts
+            .Where(s => s.IsPinned)
+            .OrderBy(s => s.PinOrder ?? int.MaxValue)
+            .ToList();
         var items = new List<IListItem>(shortcuts.Length + 4);
 
         foreach (var shortcut in shortcuts)
         {
-            items.Add(BuildShortcutItem(shortcut));
+            items.Add(BuildShortcutItem(shortcut, pinnedInOrder));
         }
 
         items.Add(ShortcutListItems.CreateNewShortcut(_createShortcutCommand));
@@ -179,11 +186,21 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
         RaiseItemsChanged();
     }
 
-    private ListItem BuildShortcutItem(TerminalShortcut shortcut)
+    private ListItem BuildShortcutItem(TerminalShortcut shortcut, IReadOnlyList<TerminalShortcut> pinnedInOrder)
     {
         var item = ShortcutListItems.CreateOpen(shortcut, _settings);
 
-        var moreCommands = new List<CommandContextItem>(ShortcutContextCommands.Build(shortcut, Reload, _settings));
+        var pinnedIndex = pinnedInOrder.FindIndex(s => s.Name == shortcut.Name);
+        var showMoveUpInHover = shortcut.IsPinned && pinnedIndex > 0;
+        var showMoveDownInHover = shortcut.IsPinned && pinnedIndex >= 0 && pinnedIndex < pinnedInOrder.Count - 1;
+
+        var moreCommands = new List<CommandContextItem>(
+            ShortcutContextCommands.Build(
+                shortcut,
+                Reload,
+                _settings,
+                showMoveUpInHover: showMoveUpInHover,
+                showMoveDownInHover: showMoveDownInHover));
 
         item.MoreCommands = moreCommands.ToArray();
         return item;

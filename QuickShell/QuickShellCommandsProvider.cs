@@ -43,16 +43,15 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
                 Title = DisplayName,
                 Subtitle = "Open saved folders in your terminal",
                 Icon = new IconInfo("\uE756"),
+                HomeHoverActionsMode = HoverActionsMode.None,
                 MoreCommands =
                 [
                     new CommandContextItem(new UndoShortcutCommand(ReloadPages))
                     {
-                        Title = "Undo last shortcut change",
                         RequestedShortcut = KeyChordHelpers.FromModifiers(ctrl: true, vkey: Windows.System.VirtualKey.Z),
                     },
                     new CommandContextItem(new RedoShortcutCommand(ReloadPages))
                     {
-                        Title = "Redo last shortcut change",
                         RequestedShortcut = KeyChordHelpers.FromModifiers(ctrl: true, vkey: Windows.System.VirtualKey.Y),
                     },
                     new CommandContextItem(new ExportShortcutsCommand()),

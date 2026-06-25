@@ -9,11 +9,21 @@ namespace QuickShell.Services;
 
 internal static class ShortcutContextCommands
 {
+    private const int HoverOrderElevation = 0;
+    private const int HoverOrderEdit = 10;
+    private const int HoverOrderPin = 20;
+    private const int HoverOrderDuplicate = 30;
+    private const int HoverOrderDelete = 50;
+    private const int HoverOrderMoveUp = 60;
+    private const int HoverOrderMoveDown = 70;
+
     public static CommandContextItem[] Build(
         TerminalShortcut shortcut,
         Action onChanged,
         QuickShellSettingsManager settings,
-        bool includeEdit = true)
+        bool includeEdit = true,
+        bool showMoveUpInHover = false,
+        bool showMoveDownInHover = false)
     {
         var items = new List<CommandContextItem>();
 
@@ -26,7 +36,9 @@ internal static class ShortcutContextCommands
                 alt: false,
                 shift: false,
                 VirtualKey.E,
-                title: editPage.Title));
+                title: editPage.Title,
+                showInHoverActions: true,
+                hoverOrder: HoverOrderEdit));
         }
 
         AddElevationContextCommand(items, shortcut, settings);
@@ -38,7 +50,9 @@ internal static class ShortcutContextCommands
             alt: false,
             shift: false,
             VirtualKey.P,
-            title: pinCommand.Name));
+            title: pinCommand.Name,
+            showInHoverActions: true,
+            hoverOrder: HoverOrderPin));
 
         var duplicateCommand = new DuplicateShortcutCommand(shortcut.Name, onChanged);
         items.Add(WithShortcut(
@@ -47,7 +61,9 @@ internal static class ShortcutContextCommands
             alt: false,
             shift: true,
             VirtualKey.D,
-            title: duplicateCommand.Name));
+            title: duplicateCommand.Name,
+            showInHoverActions: true,
+            hoverOrder: HoverOrderDuplicate));
 
         var undoCommand = new UndoShortcutCommand(onChanged);
         items.Add(WithShortcut(
@@ -76,7 +92,9 @@ internal static class ShortcutContextCommands
                 alt: true,
                 shift: false,
                 VirtualKey.Up,
-                title: moveUpCommand.Name));
+                title: moveUpCommand.Name,
+                showInHoverActions: showMoveUpInHover,
+                hoverOrder: HoverOrderMoveUp));
 
             var moveDownCommand = new MovePinnedShortcutCommand(shortcut.Name, +1, onChanged);
             items.Add(WithShortcut(
@@ -85,7 +103,9 @@ internal static class ShortcutContextCommands
                 alt: true,
                 shift: false,
                 VirtualKey.Down,
-                title: moveDownCommand.Name));
+                title: moveDownCommand.Name,
+                showInHoverActions: showMoveDownInHover,
+                hoverOrder: HoverOrderMoveDown));
         }
 
         var deleteCommand = new DeleteShortcutCommand(shortcut.Name, onChanged);
@@ -96,7 +116,9 @@ internal static class ShortcutContextCommands
             shift: false,
             VirtualKey.Delete,
             title: deleteCommand.Name,
-            isCritical: true));
+            isCritical: true,
+            showInHoverActions: true,
+            hoverOrder: HoverOrderDelete));
 
         return items.ToArray();
     }
@@ -112,6 +134,8 @@ internal static class ShortcutContextCommands
         items.Add(new CommandContextItem(editPage)
         {
             Title = editPage.Title,
+            ShowInHoverActions = true,
+            HoverOrder = HoverOrderEdit,
             RequestedShortcut = KeyChordHelpers.FromModifiers(
                 ctrl: true,
                 alt: false,
@@ -123,12 +147,12 @@ internal static class ShortcutContextCommands
         if (!shortcut.RunAsAdmin)
         {
             var adminCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsAdmin: true);
-            items.Add(CreateOpenAsAdminContextItem(adminCommand));
+            items.Add(CreateOpenAsAdminContextItem(adminCommand, showInHoverActions: true));
         }
         else
         {
             var standardCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsStandard: true);
-            items.Add(CreateOpenWithoutAdminContextItem(standardCommand));
+            items.Add(CreateOpenWithoutAdminContextItem(standardCommand, showInHoverActions: true));
         }
 
         return items.ToArray();
@@ -144,12 +168,12 @@ internal static class ShortcutContextCommands
         if (shortcut.RunAsAdmin)
         {
             var standardCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsStandard: true);
-            contextItem = CreateOpenWithoutAdminContextItem(standardCommand);
+            contextItem = CreateOpenWithoutAdminContextItem(standardCommand, showInHoverActions: true);
         }
         else
         {
             var adminCommand = new OpenTerminalShortcutCommand(shortcut, settings, runAsAdmin: true);
-            contextItem = CreateOpenAsAdminContextItem(adminCommand);
+            contextItem = CreateOpenAsAdminContextItem(adminCommand, showInHoverActions: true);
         }
 
         if (insertAtStart)
@@ -162,10 +186,14 @@ internal static class ShortcutContextCommands
         }
     }
 
-    public static CommandContextItem CreateOpenAsAdminContextItem(OpenTerminalShortcutCommand command) =>
+    public static CommandContextItem CreateOpenAsAdminContextItem(
+        OpenTerminalShortcutCommand command,
+        bool showInHoverActions = false) =>
         new(command)
         {
             Title = "Open as administrator",
+            ShowInHoverActions = showInHoverActions,
+            HoverOrder = HoverOrderElevation,
             RequestedShortcut = KeyChordHelpers.FromModifiers(
                 ctrl: true,
                 alt: false,
@@ -174,10 +202,14 @@ internal static class ShortcutContextCommands
                 vkey: VirtualKey.Enter),
         };
 
-    public static CommandContextItem CreateOpenWithoutAdminContextItem(OpenTerminalShortcutCommand command) =>
+    public static CommandContextItem CreateOpenWithoutAdminContextItem(
+        OpenTerminalShortcutCommand command,
+        bool showInHoverActions = false) =>
         new(command)
         {
             Title = "Open without administrator",
+            ShowInHoverActions = showInHoverActions,
+            HoverOrder = HoverOrderElevation,
             RequestedShortcut = KeyChordHelpers.FromModifiers(
                 ctrl: true,
                 alt: false,
@@ -193,11 +225,15 @@ internal static class ShortcutContextCommands
         bool shift,
         VirtualKey key,
         string title,
-        bool isCritical = false) =>
+        bool isCritical = false,
+        bool showInHoverActions = false,
+        int hoverOrder = 0) =>
         new(command)
         {
             Title = title,
             IsCritical = isCritical,
+            ShowInHoverActions = showInHoverActions,
+            HoverOrder = hoverOrder,
             RequestedShortcut = KeyChordHelpers.FromModifiers(ctrl, alt, shift, win: false, vkey: key),
         };
 }

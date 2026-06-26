@@ -313,7 +313,7 @@ Quick-action icon buttons shown at the trailing edge of list rows on hover or ke
 
 ### User master toggle
 
-CmdPal exposes **List hover actions** in Settings → Appearance (`EnableListHoverActions`, default on). When disabled, no extension can show hover strips regardless of SDK configuration.
+CmdPal exposes **List hover actions** in Settings → Appearance (`EnableListHoverActions`, default off). When disabled, no extension can show hover strips regardless of SDK configuration.
 
 ### Configuration layers
 

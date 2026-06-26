@@ -195,25 +195,33 @@ try {
 
     $msbuild = Get-MsBuildPath
     $localToolkit = Join-Path (Split-Path $ProjectRoot -Parent) 'PowerToys\src\modules\cmdpal\extensionsdk\Microsoft.CommandPalette.Extensions.Toolkit\Microsoft.CommandPalette.Extensions.Toolkit.csproj'
+    $useLocalSdk = $false
     if (Test-Path $localToolkit) {
         Write-Host 'Building local Command Palette SDK (hover APIs)...'
         & $msbuild $localToolkit /p:Configuration=$Configuration /p:Platform=x64 /t:Build /v:minimal | Out-Host
         if ($LASTEXITCODE -ne 0) {
             throw "Local CmdPal SDK build failed with exit code $LASTEXITCODE"
         }
+        $useLocalSdk = $true
     }
     else {
         Write-Warning @"
 Local PowerToys SDK not found at $localToolkit.
 QuickShell will use NuGet Microsoft.CommandPalette.Extensions, which does not include hover action APIs.
-Clone/build PowerToys at A:\PowerToys or set UseLocalCmdPalSdk=false only for legacy builds.
+Clone/build PowerToys at A:\PowerToys and rerun deploy to opt in with UseLocalCmdPalSdk=true.
 "@
+    }
+
+    $localSdkArg = @()
+    if ($useLocalSdk) {
+        $localSdkArg = @('/p:UseLocalCmdPalSdk=true')
     }
 
     Write-Host "Building signed MSIX ($Configuration|x64)..."
     & $msbuild (Join-Path $ProjectDir 'QuickShell.csproj') `
         /p:Configuration=$Configuration `
         /p:Platform=x64 `
+        @localSdkArg `
         /p:PackageCertificateThumbprint=$thumbprint `
         /p:PackageCertificateKeyFile= `
         /p:PackageCertificatePassword= `

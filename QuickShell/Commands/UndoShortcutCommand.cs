@@ -16,7 +16,7 @@ internal sealed partial class UndoShortcutCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        if (!ShortcutStore.Undo())
+        if (!QuickShellRuntimeServices.Shortcuts.Undo())
         {
             return QuickShellNavigation.StayOpen("Nothing to undo.");
         }

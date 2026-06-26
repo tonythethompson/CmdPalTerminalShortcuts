@@ -97,7 +97,7 @@ internal static class ShortcutValidation
             return true;
         }
 
-        var existing = ShortcutStore.GetByName(name);
+        var existing = QuickShellRuntimeServices.Shortcuts.GetByName(name);
         if (existing is not null)
         {
             error = $"A shortcut named '{name}' already exists.";
@@ -193,9 +193,19 @@ internal static class ShortcutValidation
         {
             normalized = Path.GetFullPath(trimmed);
         }
-        catch (Exception ex)
+        catch (ArgumentException)
         {
-            error = $"Directory is not valid: {ex.Message}";
+            error = "Directory path is not valid.";
+            return false;
+        }
+        catch (NotSupportedException)
+        {
+            error = "Directory path is not valid.";
+            return false;
+        }
+        catch (PathTooLongException)
+        {
+            error = "Directory path is too long.";
             return false;
         }
 

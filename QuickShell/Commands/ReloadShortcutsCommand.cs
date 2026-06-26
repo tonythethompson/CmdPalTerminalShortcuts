@@ -16,7 +16,7 @@ internal sealed partial class ReloadShortcutsCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        ShortcutStore.Reload();
+        QuickShellRuntimeServices.Shortcuts.Reload();
         TerminalCatalog.InvalidateCache();
         _onReload();
         return QuickShellNavigation.StayOpen("Refreshed shortcuts and terminals.");

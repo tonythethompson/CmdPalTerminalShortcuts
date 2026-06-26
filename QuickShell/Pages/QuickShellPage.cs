@@ -80,7 +80,7 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
             list.Insert(insertAt++, BuildImportConflictBanner(pending));
         }
 
-        if (ShortcutFormDraftStore.HasPending && ShortcutFormDraftStore.Pending is { } editDraft)
+        if (QuickShellRuntimeServices.Drafts.HasPending && QuickShellRuntimeServices.Drafts.Pending is { } editDraft)
         {
             list.Insert(insertAt, BuildPendingEditBanner(editDraft));
         }
@@ -150,7 +150,7 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 
     private void RefreshItems(string query)
     {
-        var shortcuts = ShortcutStore.Search(query).ToArray();
+        var shortcuts = QuickShellRuntimeServices.Shortcuts.Search(query).ToArray();
         var pinnedInOrder = shortcuts
             .Where(s => s.IsPinned)
             .OrderBy(s => s.PinOrder ?? int.MaxValue)

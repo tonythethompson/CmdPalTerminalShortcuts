@@ -2,11 +2,14 @@ using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Pages;
 using QuickShell.Services;
+using System.Threading;
 
 namespace QuickShell.Commands;
 
 internal sealed partial class ImportShortcutsCommand : InvokableCommand
 {
+    private static readonly TimeSpan IoTimeout = TimeSpan.FromSeconds(30);
+
     private readonly Action _onReload;
 
     public ImportShortcutsCommand(Action onReload)
@@ -24,12 +27,15 @@ internal sealed partial class ImportShortcutsCommand : InvokableCommand
             return QuickShellNavigation.StayOpen("Import cancelled.");
         }
 
-        if (!ShortcutStore.TryReadImportFile(path, out var imported, out var error))
+        using var readCancellation = new CancellationTokenSource(IoTimeout);
+        var readResult = QuickShellRuntimeServices.Shortcuts.TryReadImportFileAsync(path, readCancellation.Token).GetAwaiter().GetResult();
+        if (!readResult.Success)
         {
-            return QuickShellNavigation.StayOpen(error);
+            return QuickShellNavigation.StayOpen(readResult.Error);
         }
 
-        var conflicts = ShortcutStore.CountImportNameConflicts(imported);
+        var imported = readResult.Shortcuts;
+        var conflicts = QuickShellRuntimeServices.Shortcuts.CountImportNameConflicts(imported);
         if (conflicts > 0)
         {
             ImportConflictState.Set(path, conflicts, imported.Length, _onReload);
@@ -40,7 +46,8 @@ internal sealed partial class ImportShortcutsCommand : InvokableCommand
             });
         }
 
-        var result = ShortcutStore.ImportMerge(path);
+        using var mergeCancellation = new CancellationTokenSource(IoTimeout);
+        var result = QuickShellRuntimeServices.Shortcuts.ImportMergeAsync(path, mergeCancellation.Token).GetAwaiter().GetResult();
         if (!result.Success)
         {
             return QuickShellNavigation.StayOpen(result.Message);

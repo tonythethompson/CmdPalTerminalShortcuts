@@ -58,7 +58,8 @@ internal sealed class QuickShellSettingsManager
                 return "wt";
             }
 
-            using var document = JsonDocument.Parse(File.ReadAllText(legacyPath));
+            using var stream = File.OpenRead(legacyPath);
+            using var document = JsonDocument.Parse(stream);
             if (document.RootElement.TryGetProperty("DefaultTerminal", out var terminal))
             {
                 return Services.TerminalCatalog.NormalizeLaunchTargetId(terminal.GetString());

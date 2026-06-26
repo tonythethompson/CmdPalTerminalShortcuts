@@ -2,6 +2,8 @@ using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Services;
 using System.Text.Json.Nodes;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace QuickShell.Pages;
 
@@ -25,6 +27,8 @@ internal sealed partial class ImportConflictPage : ContentPage
 
 internal sealed partial class ImportConflictForm : FormContent
 {
+    private static readonly TimeSpan IoTimeout = TimeSpan.FromSeconds(30);
+
     private readonly Action _onReload;
 
     public ImportConflictForm(Action onReload)
@@ -111,8 +115,8 @@ internal sealed partial class ImportConflictForm : FormContent
 
         var result = action switch
         {
-            "merge" => ShortcutStore.ImportMerge(pending.Path),
-            "replace" => ShortcutStore.ImportReplace(pending.Path),
+            "merge" => ExecuteImportAction(token => QuickShellRuntimeServices.Shortcuts.ImportMergeAsync(pending.Path, token)),
+            "replace" => ExecuteImportAction(token => QuickShellRuntimeServices.Shortcuts.ImportReplaceAsync(pending.Path, token)),
             _ => null,
         };
 
@@ -158,6 +162,12 @@ internal sealed partial class ImportConflictForm : FormContent
           "FileName": "{{Escape(fileName)}}"
         }
         """;
+    }
+
+    private static ShortcutTransferResult ExecuteImportAction(Func<CancellationToken, Task<ShortcutTransferResult>> action)
+    {
+        using var cancellation = new CancellationTokenSource(IoTimeout);
+        return action(cancellation.Token).GetAwaiter().GetResult();
     }
 
     private static string? TryGetActionFromInputs(string inputs) =>

@@ -1,10 +1,13 @@
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Services;
+using System.Threading;
 
 namespace QuickShell.Commands;
 
 internal sealed partial class ExportShortcutsCommand : InvokableCommand
 {
+    private static readonly TimeSpan IoTimeout = TimeSpan.FromSeconds(30);
+
     public ExportShortcutsCommand()
     {
         Name = "Export shortcuts";
@@ -19,9 +22,11 @@ internal sealed partial class ExportShortcutsCommand : InvokableCommand
             return QuickShellNavigation.StayOpen("Export cancelled.");
         }
 
-        if (!ShortcutStore.TryExportToFile(path, out var error))
+        using var cancellation = new CancellationTokenSource(IoTimeout);
+        var result = QuickShellRuntimeServices.Shortcuts.TryExportToFileAsync(path, cancellation.Token).GetAwaiter().GetResult();
+        if (!result.Success)
         {
-            return QuickShellNavigation.StayOpen($"Export failed: {error}");
+            return QuickShellNavigation.StayOpen($"Export failed: {result.Error}");
         }
 
         return QuickShellNavigation.StayOpen($"Exported shortcuts to {path}.");

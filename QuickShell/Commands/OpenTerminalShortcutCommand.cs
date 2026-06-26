@@ -2,6 +2,7 @@ using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Models;
 using QuickShell.Services;
+using System.ComponentModel;
 
 namespace QuickShell.Commands;
 
@@ -37,7 +38,7 @@ internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        var shortcut = ShortcutStore.GetById(_shortcutId);
+        var shortcut = QuickShellRuntimeServices.Shortcuts.GetById(_shortcutId);
         if (shortcut is null)
         {
             return QuickShellNavigation.StayOpen("That shortcut was not found.");
@@ -46,12 +47,20 @@ internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
         try
         {
             TerminalLauncher.Open(shortcut, _settings.DefaultLaunchTargetId, _runAsAdmin, _runAsStandard);
-            ShortcutStore.MarkUsed(shortcut.Id);
+            QuickShellRuntimeServices.Shortcuts.MarkUsed(shortcut.Id);
             return CommandResult.Dismiss();
         }
-        catch (Exception ex)
+        catch (DirectoryNotFoundException)
         {
-            return QuickShellNavigation.StayOpen($"Failed to open terminal: {ex.Message}");
+            return QuickShellNavigation.StayOpen("Failed to open terminal: the folder path could not be found.");
+        }
+        catch (InvalidOperationException)
+        {
+            return QuickShellNavigation.StayOpen("Failed to open terminal: check the shortcut settings and try again.");
+        }
+        catch (Win32Exception)
+        {
+            return QuickShellNavigation.StayOpen("Failed to open terminal: launch was canceled or blocked by the system.");
         }
     }
 }

@@ -139,7 +139,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
 
         if (ShortcutCommandIds.TryParseOpen(id, out var openKey))
         {
-            var shortcut = ShortcutStore.ResolveForOpenCommand(openKey);
+            var shortcut = QuickShellRuntimeServices.Shortcuts.ResolveForOpenCommand(openKey);
             if (shortcut is null)
             {
                 return null;

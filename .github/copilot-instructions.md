@@ -41,6 +41,14 @@ This project includes Copilot skills for common workflows:
 - **add-fallback-commands** — Add catch-all search commands
 - **publish-extension** — Publish to Microsoft Store or WinGet
 
+## Remediation Process
+
+When remediating findings in this repo, execute in this order:
+- Password cleanup
+- Preview SDK decision
+- Sanitize user-facing errors
+- Lock/static refactor planning
+
 ## Documentation
 
 - [Creating an extension](https://learn.microsoft.com/windows/powertoys/command-palette/creating-an-extension)

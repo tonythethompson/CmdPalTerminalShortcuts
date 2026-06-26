@@ -18,13 +18,13 @@ internal sealed partial class DuplicateShortcutCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        var duplicate = ShortcutStore.BuildDuplicate(_sourceName);
+        var duplicate = QuickShellRuntimeServices.Shortcuts.BuildDuplicate(_sourceName);
         if (duplicate is null)
         {
             return QuickShellNavigation.StayOpen($"Shortcut '{_sourceName}' was not found.");
         }
 
-        ShortcutStore.Upsert(duplicate);
+        QuickShellRuntimeServices.Shortcuts.Upsert(duplicate);
         _onChanged();
         return QuickShellNavigation.StayOpen($"Duplicated as '{duplicate.Name}'.");
     }

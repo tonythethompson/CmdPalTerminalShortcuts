@@ -21,7 +21,7 @@ internal sealed partial class MoveFavoriteShortcutCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        var moved = ShortcutStore.MovePinned(_name, _direction);
+        var moved = QuickShellRuntimeServices.Shortcuts.MovePinned(_name, _direction);
         if (!moved)
         {
             return QuickShellNavigation.StayOpen("Favorite cannot be moved further.");

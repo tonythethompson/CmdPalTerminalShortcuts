@@ -50,7 +50,7 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
 
     private void RefreshItems()
     {
-        var shortcuts = ShortcutStore.Search(_query).ToArray();
+        var shortcuts = QuickShellRuntimeServices.Shortcuts.Search(_query).ToArray();
         _items = shortcuts.Length == 0
             ? []
             : shortcuts.Select(BuildShortcutItem).Cast<IListItem>().ToArray();

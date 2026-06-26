@@ -1,6 +1,7 @@
 using QuickShell.Models;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace QuickShell.Services;
 
@@ -17,68 +18,70 @@ internal sealed class ShortcutTransferResult
     public int Renamed { get; init; }
 }
 
-internal static class ShortcutStore
+internal readonly record struct ShortcutExportResult(bool Success, string Error);
+
+internal readonly record struct ShortcutImportReadResult(bool Success, TerminalShortcut[] Shortcuts, string Error);
+
+internal sealed class ShortcutRepository : IShortcutRepository
 {
     private const int MaxConfigBytes = 2 * 1024 * 1024;
     private const int MaxHistoryEntries = 50;
 
-    private static readonly object Sync = new();
-    private static readonly Mutex FileMutex = new(false, @"Global\QuickShell_shortcuts_json");
+    private readonly SemaphoreSlim _sync = new(1, 1);
+    private readonly Mutex _fileMutex = new(false, @"Global\QuickShell_shortcuts_json");
 
-    private static TerminalShortcut[] _shortcuts = [];
-    private static TerminalShortcut[] _lastGoodShortcuts = [];
-    private static readonly List<TerminalShortcut[]> UndoHistory = [];
-    private static readonly List<TerminalShortcut[]> RedoHistory = [];
-    private static DateTime _lastWriteTimeUtc = DateTime.MinValue;
-    private static bool _configEnsured;
-    private static bool _persistPending;
-    private static Timer? _persistTimer;
+    private TerminalShortcut[] _shortcuts = [];
+    private TerminalShortcut[] _lastGoodShortcuts = [];
+    private readonly List<TerminalShortcut[]> _undoHistory = [];
+    private readonly List<TerminalShortcut[]> _redoHistory = [];
+    private DateTime _lastWriteTimeUtc = DateTime.MinValue;
+    private bool _configEnsured;
+    private bool _persistPending;
+    private Timer? _persistTimer;
 
-    public static string ConfigDirectory =>
+    public string ConfigDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickShell");
 
-    public static string ConfigPath => Path.Combine(ConfigDirectory, "shortcuts.json");
+    public string ConfigPath => Path.Combine(ConfigDirectory, "shortcuts.json");
 
-    public static IReadOnlyList<TerminalShortcut> GetShortcuts()
-    {
-        lock (Sync)
+    public IReadOnlyList<TerminalShortcut> GetShortcuts() =>
+        WithLock(() =>
         {
             EnsureLoaded();
             return CloneAll(_shortcuts);
-        }
-    }
+        });
 
-    public static TerminalShortcut? GetByName(string name)
+    public TerminalShortcut? GetByName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             return null;
         }
 
-        lock (Sync)
+        return WithLock(() =>
         {
             EnsureLoaded();
             var shortcut = _shortcuts.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             return shortcut is null ? null : Clone(shortcut);
-        }
+        });
     }
 
-    public static TerminalShortcut? GetById(string id)
+    public TerminalShortcut? GetById(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
             return null;
         }
 
-        lock (Sync)
+        return WithLock(() =>
         {
             EnsureLoaded();
             var shortcut = _shortcuts.FirstOrDefault(s => s.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
             return shortcut is null ? null : Clone(shortcut);
-        }
+        });
     }
 
-    public static TerminalShortcut? ResolveForOpenCommand(string key)
+    public TerminalShortcut? ResolveForOpenCommand(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
         {
@@ -99,92 +102,127 @@ internal static class ShortcutStore
         return null;
     }
 
-    public static void Reload()
-    {
-        lock (Sync)
+    public void Reload() =>
+        WithLock(() =>
         {
             CancelPendingPersist();
             _lastWriteTimeUtc = DateTime.MinValue;
             EnsureLoaded(force: true);
-        }
-    }
+        });
 
-    public static void FlushPendingWrites()
+    public void FlushPendingWrites() =>
+        WithLock(FlushPendingPersistLocked);
+
+    public bool TryExportToFile(string path, out string error)
     {
-        lock (Sync)
-        {
-            FlushPendingPersistLocked();
-        }
+        var result = TryExportToFileAsync(path).GetAwaiter().GetResult();
+        error = result.Error;
+        return result.Success;
     }
 
-    public static bool TryExportToFile(string path, out string error)
+    public async Task<ShortcutExportResult> TryExportToFileAsync(string path, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
-            error = "Export path is required.";
-            return false;
+            return new ShortcutExportResult(false, "Export path is required.");
         }
 
-        lock (Sync)
-        {
-            EnsureLoaded();
-            FlushPendingPersistLocked();
+        byte[] payload;
 
-            try
+        try
+        {
+            var prepare = WithLock(() =>
             {
+                EnsureLoaded();
+                FlushPendingPersistLocked();
+
                 var shortcuts = CloneAll(_shortcuts);
-                var json = JsonSerializer.Serialize(shortcuts, QuickShellJsonContext.Default.TerminalShortcutArray);
-                if (json.Length > MaxConfigBytes)
+                var preparedPayload = JsonSerializer.SerializeToUtf8Bytes(shortcuts, QuickShellJsonContext.Default.TerminalShortcutArray);
+                if (preparedPayload.Length > MaxConfigBytes)
                 {
-                    error = "Shortcut data is too large to export.";
-                    return false;
+                    return (Success: false, Payload: Array.Empty<byte>());
                 }
 
-                var directory = Path.GetDirectoryName(path);
-                if (!string.IsNullOrWhiteSpace(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
+                return (Success: true, Payload: preparedPayload);
+            });
 
-                File.WriteAllText(path, json);
-                error = string.Empty;
-                return true;
-            }
-            catch (Exception ex)
+            if (!prepare.Success)
             {
-                error = ex.Message;
-                return false;
+                return new ShortcutExportResult(false, "Shortcut data is too large to export.");
             }
+
+            payload = prepare.Payload;
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            await File.WriteAllBytesAsync(path, payload, cancellationToken).ConfigureAwait(false);
+            return new ShortcutExportResult(true, string.Empty);
+        }
+        catch (OperationCanceledException)
+        {
+            return new ShortcutExportResult(false, "Export cancelled.");
+        }
+        catch (IOException)
+        {
+            return new ShortcutExportResult(false, "Export failed: unable to write the destination file.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new ShortcutExportResult(false, "Export failed: access to the destination path was denied.");
+        }
+        catch (ArgumentException)
+        {
+            return new ShortcutExportResult(false, "Export failed: the destination path is invalid.");
+        }
+        catch (NotSupportedException)
+        {
+            return new ShortcutExportResult(false, "Export failed: the destination path format is not supported.");
         }
     }
 
-    public static bool TryReadImportFile(string path, out TerminalShortcut[] shortcuts, out string error)
+    public bool TryReadImportFile(string path, out TerminalShortcut[] shortcuts, out string error)
     {
-        shortcuts = [];
+        var result = TryReadImportFileAsync(path).GetAwaiter().GetResult();
+        shortcuts = result.Shortcuts;
+        error = result.Error;
+        return result.Success;
+    }
 
+    public async Task<ShortcutImportReadResult> TryReadImportFileAsync(string path, CancellationToken cancellationToken = default)
+    {
         if (string.IsNullOrWhiteSpace(path))
         {
-            error = "Import path is required.";
-            return false;
+            return new ShortcutImportReadResult(false, [], "Import path is required.");
         }
 
         if (!File.Exists(path))
         {
-            error = "File not found.";
-            return false;
+            return new ShortcutImportReadResult(false, [], "File not found.");
         }
 
-        if (!TryLoadShortcutsFromFile(path, out shortcuts) || shortcuts.Length == 0)
+        try
         {
-            error = "No valid shortcuts were found in that file.";
-            return false;
-        }
+            var (loaded, shortcuts) = await TryLoadShortcutsFromFileAsync(path, cancellationToken).ConfigureAwait(false);
+            if (!loaded || shortcuts.Length == 0)
+            {
+                return new ShortcutImportReadResult(false, [], "No valid shortcuts were found in that file.");
+            }
 
-        error = string.Empty;
-        return true;
+            return new ShortcutImportReadResult(true, shortcuts, string.Empty);
+        }
+        catch (OperationCanceledException)
+        {
+            return new ShortcutImportReadResult(false, [], "Import cancelled.");
+        }
     }
 
-    public static int CountImportNameConflicts(IReadOnlyList<TerminalShortcut> imported)
+    public int CountImportNameConflicts(IReadOnlyList<TerminalShortcut> imported)
     {
         if (imported.Count == 0)
         {
@@ -198,7 +236,7 @@ internal static class ShortcutStore
         return imported.Count(shortcut => existingNames.Contains(shortcut.Name));
     }
 
-    public static ShortcutTransferResult ImportMerge(string path)
+    public ShortcutTransferResult ImportMerge(string path)
     {
         if (!TryReadImportFile(path, out var imported, out var error))
         {
@@ -209,7 +247,79 @@ internal static class ShortcutStore
             };
         }
 
-        lock (Sync)
+        return ImportMergeCore(imported);
+    }
+
+    public async Task<ShortcutTransferResult> ImportMergeAsync(string path, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var readResult = await TryReadImportFileAsync(path, cancellationToken).ConfigureAwait(false);
+            if (!readResult.Success)
+            {
+                return new ShortcutTransferResult
+                {
+                    Success = false,
+                    Message = readResult.Error,
+                };
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            return ImportMergeCore(readResult.Shortcuts);
+        }
+        catch (OperationCanceledException)
+        {
+            return new ShortcutTransferResult
+            {
+                Success = false,
+                Message = "Import cancelled.",
+            };
+        }
+    }
+
+    public ShortcutTransferResult ImportReplace(string path)
+    {
+        if (!TryReadImportFile(path, out var imported, out var error))
+        {
+            return new ShortcutTransferResult
+            {
+                Success = false,
+                Message = error,
+            };
+        }
+
+        return ImportReplaceCore(imported);
+    }
+
+    public async Task<ShortcutTransferResult> ImportReplaceAsync(string path, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var readResult = await TryReadImportFileAsync(path, cancellationToken).ConfigureAwait(false);
+            if (!readResult.Success)
+            {
+                return new ShortcutTransferResult
+                {
+                    Success = false,
+                    Message = readResult.Error,
+                };
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            return ImportReplaceCore(readResult.Shortcuts);
+        }
+        catch (OperationCanceledException)
+        {
+            return new ShortcutTransferResult
+            {
+                Success = false,
+                Message = "Import cancelled.",
+            };
+        }
+    }
+
+    private ShortcutTransferResult ImportMergeCore(TerminalShortcut[] imported) =>
+        WithLock(() =>
         {
             EnsureLoaded();
             CancelPendingPersist();
@@ -280,21 +390,10 @@ internal static class ShortcutStore
                 Skipped = skipped,
                 Renamed = renamed,
             };
-        }
-    }
+        });
 
-    public static ShortcutTransferResult ImportReplace(string path)
-    {
-        if (!TryReadImportFile(path, out var imported, out var error))
-        {
-            return new ShortcutTransferResult
-            {
-                Success = false,
-                Message = error,
-            };
-        }
-
-        lock (Sync)
+    private ShortcutTransferResult ImportReplaceCore(TerminalShortcut[] imported) =>
+        WithLock(() =>
         {
             EnsureLoaded();
             CancelPendingPersist();
@@ -345,52 +444,47 @@ internal static class ShortcutStore
                 Imported = valid.Count,
                 Skipped = skipped,
             };
-        }
-    }
+        });
 
-    public static bool Undo()
-    {
-        lock (Sync)
+    public bool Undo() =>
+        WithLock(() =>
         {
             EnsureLoaded();
             CancelPendingPersist();
 
-            if (UndoHistory.Count == 0)
+            if (_undoHistory.Count == 0)
             {
                 return false;
             }
 
             var current = CloneAll(_shortcuts);
-            var previous = UndoHistory[^1];
-            UndoHistory.RemoveAt(UndoHistory.Count - 1);
-            PushHistory(RedoHistory, current);
+            var previous = _undoHistory[^1];
+            _undoHistory.RemoveAt(_undoHistory.Count - 1);
+            PushHistory(_redoHistory, current);
             SaveLocked(previous);
             return true;
-        }
-    }
+        });
 
-    public static bool Redo()
-    {
-        lock (Sync)
+    public bool Redo() =>
+        WithLock(() =>
         {
             EnsureLoaded();
             CancelPendingPersist();
 
-            if (RedoHistory.Count == 0)
+            if (_redoHistory.Count == 0)
             {
                 return false;
             }
 
             var current = CloneAll(_shortcuts);
-            var next = RedoHistory[^1];
-            RedoHistory.RemoveAt(RedoHistory.Count - 1);
-            PushHistory(UndoHistory, current);
+            var next = _redoHistory[^1];
+            _redoHistory.RemoveAt(_redoHistory.Count - 1);
+            PushHistory(_undoHistory, current);
             SaveLocked(next);
             return true;
-        }
-    }
+        });
 
-    public static void Upsert(TerminalShortcut shortcut, string? originalName = null)
+    public void Upsert(TerminalShortcut shortcut, string? originalName = null)
     {
         if (!ShortcutValidation.TryValidate(shortcut, out var validationError))
         {
@@ -402,7 +496,7 @@ internal static class ShortcutStore
             throw new InvalidOperationException(validationError);
         }
 
-        lock (Sync)
+        WithLock(() =>
         {
             EnsureLoaded();
             CancelPendingPersist();
@@ -441,17 +535,17 @@ internal static class ShortcutStore
 
             RecordHistoryLocked(previous, list);
             SaveLocked(list);
-        }
+        });
     }
 
-    public static bool Delete(string name)
+    public bool Delete(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             return false;
         }
 
-        lock (Sync)
+        return WithLock(() =>
         {
             EnsureLoaded();
             CancelPendingPersist();
@@ -466,17 +560,17 @@ internal static class ShortcutStore
             }
 
             return removed;
-        }
+        });
     }
 
-    public static bool TogglePinned(string name)
+    public bool TogglePinned(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             return false;
         }
 
-        lock (Sync)
+        return WithLock(() =>
         {
             EnsureLoaded();
             CancelPendingPersist();
@@ -494,17 +588,17 @@ internal static class ShortcutStore
             RecordHistoryLocked(previous, list);
             SaveLocked(list);
             return shortcut.IsPinned;
-        }
+        });
     }
 
-    public static bool MovePinned(string name, int direction)
+    public bool MovePinned(string name, int direction)
     {
         if (string.IsNullOrWhiteSpace(name) || direction == 0)
         {
             return false;
         }
 
-        lock (Sync)
+        return WithLock(() =>
         {
             EnsureLoaded();
             CancelPendingPersist();
@@ -538,17 +632,17 @@ internal static class ShortcutStore
             RecordHistoryLocked(previous, list);
             SaveLocked(list);
             return true;
-        }
+        });
     }
 
-    public static void MarkUsed(string shortcutId)
+    public void MarkUsed(string shortcutId)
     {
         if (string.IsNullOrWhiteSpace(shortcutId))
         {
             return;
         }
 
-        lock (Sync)
+        WithLock(() =>
         {
             EnsureLoaded();
 
@@ -568,10 +662,10 @@ internal static class ShortcutStore
             shortcut.LastUsedUtc = now;
             _shortcuts = OrderForDisplay(list);
             SchedulePersistLocked();
-        }
+        });
     }
 
-    public static TerminalShortcut? BuildDuplicate(string name)
+    public TerminalShortcut? BuildDuplicate(string name)
     {
         var source = GetByName(name);
         if (source is null)
@@ -588,7 +682,7 @@ internal static class ShortcutStore
         return copy;
     }
 
-    public static IEnumerable<TerminalShortcut> Search(string query)
+    public IEnumerable<TerminalShortcut> Search(string query)
     {
         var shortcuts = GetShortcuts();
         if (string.IsNullOrWhiteSpace(query))
@@ -599,7 +693,7 @@ internal static class ShortcutStore
         return shortcuts.Where(shortcut => Matches(shortcut, query.Trim()));
     }
 
-    private static void EnsureLoaded(bool force = false)
+    private void EnsureLoaded(bool force = false)
     {
         EnsureConfigExists();
 
@@ -642,7 +736,7 @@ internal static class ShortcutStore
         }
     }
 
-    private static void EnsureConfigExists()
+    private void EnsureConfigExists()
     {
         if (_configEnsured)
         {
@@ -672,12 +766,12 @@ internal static class ShortcutStore
         _configEnsured = true;
     }
 
-    private static bool HasShortcutContent(string path)
+    private bool HasShortcutContent(string path)
     {
         return TryLoadShortcutsFromFile(path, out var shortcuts) && shortcuts.Length > 0;
     }
 
-    private static bool TryImportShortcutsFromAlternateSources()
+    private bool TryImportShortcutsFromAlternateSources()
     {
         foreach (var candidate in GetImportCandidatePaths())
         {
@@ -701,7 +795,7 @@ internal static class ShortcutStore
         return false;
     }
 
-    private static IEnumerable<string> GetImportCandidatePaths()
+    private IEnumerable<string> GetImportCandidatePaths()
     {
         yield return ConfigPath + ".bak";
 
@@ -711,7 +805,7 @@ internal static class ShortcutStore
             "shortcuts.json");
     }
 
-    private static bool TryLoadShortcutsFromFile(string path, out TerminalShortcut[] shortcuts)
+    private bool TryLoadShortcutsFromFile(string path, out TerminalShortcut[] shortcuts)
     {
         shortcuts = [];
 
@@ -723,8 +817,8 @@ internal static class ShortcutStore
                 return false;
             }
 
-            var json = File.ReadAllText(path);
-            var parsed = JsonSerializer.Deserialize(json, QuickShellJsonContext.Default.ListTerminalShortcut);
+            using var stream = File.OpenRead(path);
+            var parsed = JsonSerializer.Deserialize(stream, QuickShellJsonContext.Default.ListTerminalShortcut);
             if (parsed is null)
             {
                 return false;
@@ -750,7 +844,48 @@ internal static class ShortcutStore
         }
     }
 
-    private static void SaveLocked(IReadOnlyCollection<TerminalShortcut> shortcuts)
+    private async Task<(bool Success, TerminalShortcut[] Shortcuts)> TryLoadShortcutsFromFileAsync(string path, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(path);
+            if (!fileInfo.Exists || fileInfo.Length == 0 || fileInfo.Length > MaxConfigBytes)
+            {
+                return (false, []);
+            }
+
+            await using var stream = File.OpenRead(path);
+            var parsed = await JsonSerializer.DeserializeAsync(stream, QuickShellJsonContext.Default.ListTerminalShortcut, cancellationToken).ConfigureAwait(false);
+            if (parsed is null)
+            {
+                return (false, []);
+            }
+
+            if (parsed.Count > ShortcutValidation.MaxShortcutCount)
+            {
+                return (false, []);
+            }
+
+            var shortcuts = OrderForDisplay(
+                parsed
+                    .Where(IsValidShortcut)
+                    .Select(Normalize)
+                    .Select(Clone)
+                    .ToArray());
+
+            return (true, shortcuts);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return (false, []);
+        }
+    }
+
+    private void SaveLocked(IReadOnlyCollection<TerminalShortcut> shortcuts)
     {
         Directory.CreateDirectory(ConfigDirectory);
         var ordered = OrderForDisplay(shortcuts.Where(IsValidShortcut).Select(Normalize).Select(Clone)).ToArray();
@@ -761,20 +896,20 @@ internal static class ShortcutStore
         _lastWriteTimeUtc = File.GetLastWriteTimeUtc(ConfigPath);
     }
 
-    private static void SchedulePersistLocked()
+    private void SchedulePersistLocked()
     {
         _persistPending = true;
-        _persistTimer ??= new Timer(_ => FlushPendingPersistLocked(), null, Timeout.Infinite, Timeout.Infinite);
+        _persistTimer ??= new Timer(_ => WithLock(FlushPendingPersistLocked), null, Timeout.Infinite, Timeout.Infinite);
         _persistTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
     }
 
-    private static void CancelPendingPersist()
+    private void CancelPendingPersist()
     {
         _persistPending = false;
         _persistTimer?.Change(Timeout.Infinite, Timeout.Infinite);
     }
 
-    private static void FlushPendingPersistLocked()
+    private void FlushPendingPersistLocked()
     {
         if (!_persistPending)
         {
@@ -787,15 +922,15 @@ internal static class ShortcutStore
         _lastWriteTimeUtc = File.GetLastWriteTimeUtc(ConfigPath);
     }
 
-    private static void WriteShortcutsAtomic(TerminalShortcut[] shortcuts)
+    private void WriteShortcutsAtomic(TerminalShortcut[] shortcuts)
     {
         if (shortcuts.Length > ShortcutValidation.MaxShortcutCount)
         {
             throw new InvalidOperationException($"At most {ShortcutValidation.MaxShortcutCount} shortcuts are supported.");
         }
 
-        var json = JsonSerializer.Serialize(shortcuts, QuickShellJsonContext.Default.TerminalShortcutArray);
-        if (json.Length > MaxConfigBytes)
+        var payload = JsonSerializer.SerializeToUtf8Bytes(shortcuts, QuickShellJsonContext.Default.TerminalShortcutArray);
+        if (payload.Length > MaxConfigBytes)
         {
             throw new InvalidOperationException("Shortcut data is too large to save.");
         }
@@ -805,14 +940,14 @@ internal static class ShortcutStore
         var tempPath = ConfigPath + ".tmp";
         var backupPath = ConfigPath + ".bak";
 
-        if (!FileMutex.WaitOne(TimeSpan.FromSeconds(5)))
+        if (!_fileMutex.WaitOne(TimeSpan.FromSeconds(5)))
         {
             throw new IOException("Could not acquire the shortcut store lock.");
         }
 
         try
         {
-            File.WriteAllText(tempPath, json);
+            File.WriteAllBytes(tempPath, payload);
 
             if (File.Exists(ConfigPath))
             {
@@ -825,7 +960,7 @@ internal static class ShortcutStore
         }
         finally
         {
-            FileMutex.ReleaseMutex();
+            _fileMutex.ReleaseMutex();
 
             try
             {
@@ -841,7 +976,7 @@ internal static class ShortcutStore
         }
     }
 
-    private static TerminalShortcut[] OrderForDisplay(IEnumerable<TerminalShortcut> shortcuts) =>
+    private TerminalShortcut[] OrderForDisplay(IEnumerable<TerminalShortcut> shortcuts) =>
         shortcuts
             .OrderByDescending(s => s.IsPinned)
             .ThenBy(s => s.PinOrder ?? int.MaxValue)
@@ -849,10 +984,10 @@ internal static class ShortcutStore
             .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    private static int NextPinOrder(IEnumerable<TerminalShortcut> list) =>
+    private int NextPinOrder(IEnumerable<TerminalShortcut> list) =>
         list.Where(s => s.IsPinned).Select(s => s.PinOrder ?? 0).DefaultIfEmpty().Max() + 1;
 
-    private static void SetPinOrder(List<TerminalShortcut> list, string name, int order)
+    private void SetPinOrder(List<TerminalShortcut> list, string name, int order)
     {
         var shortcut = list.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (shortcut is not null)
@@ -861,10 +996,10 @@ internal static class ShortcutStore
         }
     }
 
-    private static string GetDuplicateName(string sourceName) =>
+    private string GetDuplicateName(string sourceName) =>
         ResolveAvailableName(sourceName);
 
-    public static string ResolveAvailableName(string desiredName, string? replacingOriginalName = null)
+    public string ResolveAvailableName(string desiredName, string? replacingOriginalName = null)
     {
         var trimmed = desiredName.Trim();
         var existingNames = GetShortcuts()
@@ -885,7 +1020,7 @@ internal static class ShortcutStore
         return GetUniqueName(trimmed, existingNames);
     }
 
-    private static string GetUniqueName(string sourceName, HashSet<string> existingNames)
+    private string GetUniqueName(string sourceName, HashSet<string> existingNames)
     {
         if (!existingNames.Contains(sourceName))
         {
@@ -911,7 +1046,7 @@ internal static class ShortcutStore
         }
     }
 
-    private static string BuildImportMessage(int imported, int skipped, int renamed)
+    private string BuildImportMessage(int imported, int skipped, int renamed)
     {
         var parts = new List<string> { $"Imported {imported} shortcut{(imported == 1 ? "" : "s")}." };
 
@@ -928,10 +1063,10 @@ internal static class ShortcutStore
         return string.Join(" ", parts);
     }
 
-    private static bool IsValidShortcut(TerminalShortcut shortcut) =>
+    private bool IsValidShortcut(TerminalShortcut shortcut) =>
         !string.IsNullOrWhiteSpace(shortcut.Name) && !string.IsNullOrWhiteSpace(shortcut.Directory);
 
-    private static bool AssignMissingShortcutIds(TerminalShortcut[] shortcuts)
+    private bool AssignMissingShortcutIds(TerminalShortcut[] shortcuts)
     {
         var usedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var changed = false;
@@ -950,7 +1085,7 @@ internal static class ShortcutStore
         return changed;
     }
 
-    private static void AssignShortcutId(TerminalShortcut shortcut, IEnumerable<TerminalShortcut> existing)
+    private void AssignShortcutId(TerminalShortcut shortcut, IEnumerable<TerminalShortcut> existing)
     {
         var usedIds = existing
             .Where(s => !string.IsNullOrWhiteSpace(s.Id))
@@ -959,7 +1094,7 @@ internal static class ShortcutStore
         AssignShortcutId(shortcut, usedIds);
     }
 
-    private static void AssignShortcutId(TerminalShortcut shortcut, HashSet<string> usedIds)
+    private void AssignShortcutId(TerminalShortcut shortcut, HashSet<string> usedIds)
     {
         do
         {
@@ -968,7 +1103,7 @@ internal static class ShortcutStore
         while (!usedIds.Add(shortcut.Id));
     }
 
-    private static bool Matches(TerminalShortcut shortcut, string query)
+    private bool Matches(TerminalShortcut shortcut, string query)
     {
         if (shortcut.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
         {
@@ -1003,7 +1138,7 @@ internal static class ShortcutStore
                shortcut.Command.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static TerminalShortcut Normalize(TerminalShortcut shortcut)
+    private TerminalShortcut Normalize(TerminalShortcut shortcut)
     {
         var terminal = (shortcut.Terminal ?? string.Empty).Trim().ToLowerInvariant();
         shortcut.Terminal = terminal switch
@@ -1026,10 +1161,10 @@ internal static class ShortcutStore
         return shortcut;
     }
 
-    private static TerminalShortcut[] CloneAll(IEnumerable<TerminalShortcut> shortcuts) =>
+    private TerminalShortcut[] CloneAll(IEnumerable<TerminalShortcut> shortcuts) =>
         shortcuts.Select(Clone).ToArray();
 
-    private static void RecordHistoryLocked(
+    private void RecordHistoryLocked(
         IReadOnlyCollection<TerminalShortcut> previous,
         IReadOnlyCollection<TerminalShortcut> next)
     {
@@ -1039,11 +1174,11 @@ internal static class ShortcutStore
             return;
         }
 
-        PushHistory(UndoHistory, previous);
-        RedoHistory.Clear();
+        PushHistory(_undoHistory, previous);
+        _redoHistory.Clear();
     }
 
-    private static void PushHistory(List<TerminalShortcut[]> history, IEnumerable<TerminalShortcut> snapshot)
+    private void PushHistory(List<TerminalShortcut[]> history, IEnumerable<TerminalShortcut> snapshot)
     {
         history.Add(CloneAll(snapshot));
         if (history.Count > MaxHistoryEntries)
@@ -1052,7 +1187,7 @@ internal static class ShortcutStore
         }
     }
 
-    private static bool SnapshotEquals(IReadOnlyCollection<TerminalShortcut> left, TerminalShortcut[] right)
+    private bool SnapshotEquals(IReadOnlyCollection<TerminalShortcut> left, TerminalShortcut[] right)
     {
         if (left.Count != right.Length)
         {
@@ -1071,7 +1206,7 @@ internal static class ShortcutStore
         return true;
     }
 
-    private static bool ShortcutEquals(TerminalShortcut left, TerminalShortcut right) =>
+    private bool ShortcutEquals(TerminalShortcut left, TerminalShortcut right) =>
         string.Equals(left.Id, right.Id, StringComparison.Ordinal) &&
         string.Equals(left.Name, right.Name, StringComparison.Ordinal) &&
         string.Equals(left.Abbreviation, right.Abbreviation, StringComparison.Ordinal) &&
@@ -1084,7 +1219,7 @@ internal static class ShortcutStore
         left.PinOrder == right.PinOrder &&
         left.LastUsedUtc == right.LastUsedUtc;
 
-    private static TerminalShortcut Clone(TerminalShortcut shortcut) => new()
+    private TerminalShortcut Clone(TerminalShortcut shortcut) => new()
     {
         Id = shortcut.Id,
         Name = shortcut.Name,
@@ -1098,4 +1233,32 @@ internal static class ShortcutStore
         PinOrder = shortcut.PinOrder,
         LastUsedUtc = shortcut.LastUsedUtc,
     };
+
+    private void WithLock(Action action)
+    {
+        _sync.Wait();
+        try
+        {
+            action();
+        }
+        finally
+        {
+            _sync.Release();
+        }
+    }
+
+    private T WithLock<T>(Func<T> action)
+    {
+        _sync.Wait();
+        try
+        {
+            return action();
+        }
+        finally
+        {
+            _sync.Release();
+        }
+    }
 }
+
+

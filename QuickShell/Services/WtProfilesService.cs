@@ -78,8 +78,8 @@ internal static class WtProfilesService
 
         try
         {
-            var json = File.ReadAllText(path);
-            using var doc = JsonDocument.Parse(json);
+            using var stream = File.OpenRead(path);
+            using var doc = JsonDocument.Parse(stream);
 
             var defaultGuid = ReadDefaultProfileGuid(doc.RootElement);
             if (!doc.RootElement.TryGetProperty("profiles", out var profilesNode))

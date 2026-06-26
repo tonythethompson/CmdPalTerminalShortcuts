@@ -11,7 +11,7 @@ internal static class ShortcutFilePickerService
     public static string? PickExportFile()
     {
         var defaultName = $"quickshell-shortcuts-{DateTime.Now:yyyyMMdd}.json";
-        var initialDirectory = ShortcutStore.ConfigDirectory;
+        var initialDirectory = QuickShellRuntimeServices.Shortcuts.ConfigDirectory;
 
         return RunOnStaThread(() =>
         {
@@ -36,7 +36,7 @@ internal static class ShortcutFilePickerService
 
     public static string? PickImportFile()
     {
-        var initialDirectory = ShortcutStore.ConfigDirectory;
+        var initialDirectory = QuickShellRuntimeServices.Shortcuts.ConfigDirectory;
 
         return RunOnStaThread(() =>
         {

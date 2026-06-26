@@ -4,7 +4,6 @@
     <RootNamespace>QuickShell</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
-    <WindowsSdkPackageVersion>10.0.26100.68-preview</WindowsSdkPackageVersion>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
@@ -17,6 +16,11 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+  </PropertyGroup>
+
+  <!-- Release/Store must use NuGet CmdPal SDK only (local Toolkit conflicts with packaged assembly) -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <UseLocalCmdPalSdk>false</UseLocalCmdPalSdk>
   </PropertyGroup>
 
   <ItemGroup>
@@ -90,7 +94,8 @@
     <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
     <IncludeDebugSymbolsProjectOutputGroup>false</IncludeDebugSymbolsProjectOutputGroup>
     <PackageCertificateKeyFile>QuickShell_Dev.pfx</PackageCertificateKeyFile>
-    <PackageCertificatePassword>QuickShell</PackageCertificatePassword>
+    <!-- Provide via user environment/profile (for example in launchSettings.json or CI secrets), not source control. -->
+    <PackageCertificatePassword>$(QuickShellPackageCertificatePassword)</PackageCertificatePassword>
   </PropertyGroup>
 
   <!-- MSIX packaging for local Visual Studio deploy -->
@@ -107,22 +112,17 @@
     <ILLinkTreatWarningsAsErrors>false</ILLinkTreatWarningsAsErrors>
   </PropertyGroup>
 
-  <!-- Release MSIX for Microsoft Store (scripts/build-store.ps1 sets StoreBuild=true) -->
-  <PropertyGroup Condition="'$(StoreBuild)'=='true'">
+  <!-- Release MSIX (Store / VS Create App Packages): WinForms is incompatible with trimming -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release' and '$(WinGetBuild)'!='true'">
     <PublishTrimmed>false</PublishTrimmed>
     <ILLinkTreatWarningsAsErrors>false</ILLinkTreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Release MSIX for Microsoft Store (scripts/build-store.ps1 sets StoreBuild=true) -->
+  <PropertyGroup Condition="'$(StoreBuild)'=='true'">
     <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
     <AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
     <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'!='Debug' and '$(WinGetBuild)'!='true' and '$(StoreBuild)'!='true'">
-    <!-- In Release builds, trimming is enabled by default. 
-         feel free to disable this if needed -->
-    <PublishTrimmed>true</PublishTrimmed>
-
-    <!-- In release, also ignore the aforementioned ILLink warning -->
-    <ILLinkTreatWarningsAsErrors>false</ILLinkTreatWarningsAsErrors>
   </PropertyGroup>
 
   <!-- Dev MSIX does not publish Store symbol packages; skip mspdbcmf lookup when PDBs exist. -->

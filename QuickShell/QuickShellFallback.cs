@@ -36,7 +36,7 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
             return;
         }
 
-        var shortcuts = ShortcutStore.Search(_lastQuery).ToArray();
+        var shortcuts = QuickShellRuntimeServices.Shortcuts.Search(_lastQuery).ToArray();
         if (shortcuts.Length == 0)
         {
             ClearResult();

@@ -215,7 +215,7 @@ internal sealed partial class ShortcutForm : FormContent
             return;
         }
 
-        if (!ShortcutFormDraftStore.TryGetForRestore(_originalName, out var persisted))
+        if (!QuickShellRuntimeServices.Drafts.TryGetForRestore(_originalName, out var persisted))
         {
             return;
         }
@@ -429,7 +429,7 @@ internal sealed partial class ShortcutForm : FormContent
 
         if (!HasUnsavedChanges())
         {
-            ShortcutFormDraftStore.Clear();
+            QuickShellRuntimeServices.Drafts.Clear();
             return LeaveShortcutForm();
         }
 
@@ -444,7 +444,7 @@ internal sealed partial class ShortcutForm : FormContent
 
         if (action == "discard")
         {
-            ShortcutFormDraftStore.Clear();
+            QuickShellRuntimeServices.Drafts.Clear();
             return LeaveShortcutForm();
         }
 
@@ -533,7 +533,7 @@ internal sealed partial class ShortcutForm : FormContent
             return QuickShellNavigation.StayOpen(result.Message);
         }
 
-        ShortcutFormDraftStore.Clear();
+        QuickShellRuntimeServices.Drafts.Clear();
         return LeaveShortcutForm(result.Message);
     }
 
@@ -572,7 +572,7 @@ internal sealed partial class ShortcutForm : FormContent
             return;
         }
 
-        ShortcutFormDraftStore.SaveIfDirty(
+        QuickShellRuntimeServices.Drafts.SaveIfDirty(
             _originalName,
             ToDraftData(_draft),
             ToDraftData(_baselineDraft),

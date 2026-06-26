@@ -87,7 +87,7 @@ internal sealed partial class PendingShortcutEditForm : FormContent
     {
         if (action == "discard")
         {
-            ShortcutFormDraftStore.Clear();
+            QuickShellRuntimeServices.Drafts.Clear();
             _onReload();
             return QuickShellNavigation.GoBack("Discarded unsaved shortcut changes.");
         }
@@ -97,14 +97,14 @@ internal sealed partial class PendingShortcutEditForm : FormContent
             return QuickShellNavigation.StayOpen("Unable to read form values.");
         }
 
-        var pending = ShortcutFormDraftStore.Pending;
+        var pending = QuickShellRuntimeServices.Drafts.Pending;
         if (pending is null)
         {
             _onReload();
             return QuickShellNavigation.GoBack("No unsaved shortcut edit is pending.");
         }
 
-        var result = ShortcutFormDraftStore.TryCommitPending(_onReload);
+        var result = QuickShellRuntimeServices.Drafts.TryCommitPending(_onReload);
         if (!result.Success)
         {
             return QuickShellNavigation.StayOpen(result.Message);
@@ -115,7 +115,7 @@ internal sealed partial class PendingShortcutEditForm : FormContent
 
     private void ApplyPendingState()
     {
-        var pending = ShortcutFormDraftStore.Pending;
+        var pending = QuickShellRuntimeServices.Drafts.Pending;
         if (pending is null)
         {
             DataJson = """

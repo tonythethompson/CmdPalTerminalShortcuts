@@ -2,7 +2,13 @@ namespace QuickShell.Services;
 
 internal static class QuickShellRuntimeServices
 {
-    public static IShortcutRepository Shortcuts { get; } = new ShortcutRepository();
+    public static ShortcutRepository Shortcuts { get; } = new();
 
-    public static IDraftStore Drafts { get; } = new ShortcutDraftStore(Shortcuts);
+    public static ShortcutDraftStore Drafts { get; } = new(Shortcuts);
+
+    public static void Dispose()
+    {
+        Drafts.Dispose();
+        Shortcuts.Dispose();
+    }
 }

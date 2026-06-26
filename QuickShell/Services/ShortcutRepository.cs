@@ -22,7 +22,7 @@ internal readonly record struct ShortcutExportResult(bool Success, string Error)
 
 internal readonly record struct ShortcutImportReadResult(bool Success, TerminalShortcut[] Shortcuts, string Error);
 
-internal sealed class ShortcutRepository : IShortcutRepository
+internal sealed partial class ShortcutRepository : IShortcutRepository, IDisposable
 {
     private const int MaxConfigBytes = 2 * 1024 * 1024;
     private const int MaxHistoryEntries = 50;
@@ -38,6 +38,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
     private bool _configEnsured;
     private bool _persistPending;
     private Timer? _persistTimer;
+    private bool _disposed;
 
     public string ConfigDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickShell");
@@ -1001,7 +1002,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
         }
     }
 
-    private TerminalShortcut[] OrderForDisplay(IEnumerable<TerminalShortcut> shortcuts) =>
+    private static TerminalShortcut[] OrderForDisplay(IEnumerable<TerminalShortcut> shortcuts) =>
         shortcuts
             .OrderByDescending(s => s.IsPinned)
             .ThenBy(s => s.PinOrder ?? int.MaxValue)
@@ -1009,10 +1010,10 @@ internal sealed class ShortcutRepository : IShortcutRepository
             .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    private int NextPinOrder(IEnumerable<TerminalShortcut> list) =>
+    private static int NextPinOrder(IEnumerable<TerminalShortcut> list) =>
         list.Where(s => s.IsPinned).Select(s => s.PinOrder ?? 0).DefaultIfEmpty().Max() + 1;
 
-    private void SetPinOrder(List<TerminalShortcut> list, string name, int order)
+    private static void SetPinOrder(List<TerminalShortcut> list, string name, int order)
     {
         var shortcut = list.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (shortcut is not null)
@@ -1045,7 +1046,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
         return GetUniqueName(trimmed, existingNames);
     }
 
-    private string GetUniqueName(string sourceName, HashSet<string> existingNames)
+    private static string GetUniqueName(string sourceName, HashSet<string> existingNames)
     {
         if (!existingNames.Contains(sourceName))
         {
@@ -1071,7 +1072,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
         }
     }
 
-    private string BuildImportMessage(int imported, int skipped, int renamed)
+    private static string BuildImportMessage(int imported, int skipped, int renamed)
     {
         var parts = new List<string> { $"Imported {imported} shortcut{(imported == 1 ? "" : "s")}." };
 
@@ -1091,7 +1092,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
     private bool IsValidShortcut(TerminalShortcut shortcut) =>
         !string.IsNullOrWhiteSpace(shortcut.Name) && !string.IsNullOrWhiteSpace(shortcut.Directory);
 
-    private bool AssignMissingShortcutIds(TerminalShortcut[] shortcuts)
+    private static bool AssignMissingShortcutIds(TerminalShortcut[] shortcuts)
     {
         var usedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var changed = false;
@@ -1110,7 +1111,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
         return changed;
     }
 
-    private void AssignShortcutId(TerminalShortcut shortcut, IEnumerable<TerminalShortcut> existing)
+    private static void AssignShortcutId(TerminalShortcut shortcut, IEnumerable<TerminalShortcut> existing)
     {
         var usedIds = existing
             .Where(s => !string.IsNullOrWhiteSpace(s.Id))
@@ -1119,7 +1120,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
         AssignShortcutId(shortcut, usedIds);
     }
 
-    private void AssignShortcutId(TerminalShortcut shortcut, HashSet<string> usedIds)
+    private static void AssignShortcutId(TerminalShortcut shortcut, HashSet<string> usedIds)
     {
         do
         {
@@ -1128,7 +1129,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
         while (!usedIds.Add(shortcut.Id));
     }
 
-    private bool Matches(TerminalShortcut shortcut, string query)
+    private static bool Matches(TerminalShortcut shortcut, string query)
     {
         if (MatchesForRootPalette(shortcut, query))
         {
@@ -1217,7 +1218,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
         }
     }
 
-    private bool SnapshotEquals(IReadOnlyCollection<TerminalShortcut> left, TerminalShortcut[] right)
+    private static bool SnapshotEquals(IReadOnlyCollection<TerminalShortcut> left, TerminalShortcut[] right)
     {
         if (left.Count != right.Length)
         {
@@ -1236,7 +1237,7 @@ internal sealed class ShortcutRepository : IShortcutRepository
         return true;
     }
 
-    private bool ShortcutEquals(TerminalShortcut left, TerminalShortcut right) =>
+    private static bool ShortcutEquals(TerminalShortcut left, TerminalShortcut right) =>
         string.Equals(left.Id, right.Id, StringComparison.Ordinal) &&
         string.Equals(left.Name, right.Name, StringComparison.Ordinal) &&
         string.Equals(left.Abbreviation, right.Abbreviation, StringComparison.Ordinal) &&
@@ -1288,6 +1289,30 @@ internal sealed class ShortcutRepository : IShortcutRepository
         {
             _sync.Release();
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        try
+        {
+            WithLock(FlushPendingPersistLocked);
+        }
+        catch
+        {
+            // Best effort flush during shutdown.
+        }
+
+        _persistTimer?.Dispose();
+        _sync.Dispose();
+        _fileMutex.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
 

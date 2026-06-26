@@ -156,6 +156,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
         _settingsManager.SettingsChanged -= _settingsChangedHandler;
         _page.Dispose();
         _fallbackPage.Dispose();
+        QuickShellRuntimeServices.Dispose();
         base.Dispose();
         GC.SuppressFinalize(this);
     }

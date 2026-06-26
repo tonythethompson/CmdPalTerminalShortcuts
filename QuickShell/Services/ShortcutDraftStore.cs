@@ -5,10 +5,12 @@ using System.Threading.Tasks;
 
 namespace QuickShell.Services;
 
-internal sealed class ShortcutDraftStore(IShortcutRepository shortcuts) : IDraftStore
+internal sealed partial class ShortcutDraftStore(IShortcutRepository shortcuts) : IDraftStore, IDisposable
 {
     private readonly IShortcutRepository _shortcuts = shortcuts;
     private readonly SemaphoreSlim _sync = new(1, 1);
+
+    private bool _disposed;
 
     private PersistedShortcutEditDraft? _cached;
     private bool _cacheLoaded;
@@ -308,5 +310,27 @@ internal sealed class ShortcutDraftStore(IShortcutRepository shortcuts) : IDraft
         {
             _sync.Release();
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        try
+        {
+            WithLock(DrainFileIoQueueLocked);
+        }
+        catch
+        {
+            // Best effort drain during shutdown.
+        }
+
+        _sync.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

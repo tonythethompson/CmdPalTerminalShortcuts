@@ -24,7 +24,7 @@ internal static class ShortcutDisplay
 
         if (!string.IsNullOrWhiteSpace(shortcut.Abbreviation))
         {
-            parts.Add($"trigger · {shortcut.Abbreviation}");
+            parts.Add($"home · {shortcut.Abbreviation}");
         }
 
         if (shortcut.LastUsedUtc is not null)

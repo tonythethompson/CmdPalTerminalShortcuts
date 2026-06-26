@@ -30,7 +30,7 @@ internal static class ShortcutValidation
 
         if (!string.IsNullOrWhiteSpace(shortcut.Abbreviation) && shortcut.Abbreviation.Length > MaxAbbreviationLength)
         {
-            error = $"Trigger word must be {MaxAbbreviationLength} characters or fewer.";
+            error = $"Home keyword must be {MaxAbbreviationLength} characters or fewer.";
             return false;
         }
 

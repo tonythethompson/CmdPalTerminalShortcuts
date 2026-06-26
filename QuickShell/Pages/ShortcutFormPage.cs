@@ -104,7 +104,7 @@ internal sealed partial class ShortcutForm : FormContent
             {
               "type": "Input.Text",
               "id": "Abbreviation",
-              "label": "Trigger word (optional)",
+              "label": "Home keyword (optional)",
               "placeholder": "e.g. api",
               "value": "${Abbreviation}",
               "spacing": "Medium"

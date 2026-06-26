@@ -1,10 +1,10 @@
 {
   "profiles": {
-    "TemplateCmdPalExtension (Package)": {
+    "Quick Shell (Package)": {
       "commandName": "MsixPackage",
       "doNotLaunchApp": true
     },
-    "TemplateCmdPalExtension (Unpackaged)": {
+    "Quick Shell (Unpackaged)": {
       "commandName": "Project"
     }
   }

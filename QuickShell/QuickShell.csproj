@@ -16,6 +16,12 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <WindowsSdkPackageVersion>10.0.26100.68-preview</WindowsSdkPackageVersion>
+  </PropertyGroup>
+
+  <!-- Local dev PFX password: override via QuickShellPackageCertificatePassword env/user prop -->
+  <PropertyGroup>
+    <QuickShellPackageCertificatePassword Condition="'$(QuickShellPackageCertificatePassword)' == ''">QuickShell</QuickShellPackageCertificatePassword>
   </PropertyGroup>
 
   <!-- Release/Store must use NuGet CmdPal SDK only (local Toolkit conflicts with packaged assembly) -->
@@ -89,12 +95,12 @@
     <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
     <EnableAotAnalyzer>true</EnableAotAnalyzer>
 
-    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <!-- VS Build compiles the extension; run scripts/deploy.ps1 to produce a signed dev MSIX -->
+    <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
     <AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
     <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
     <IncludeDebugSymbolsProjectOutputGroup>false</IncludeDebugSymbolsProjectOutputGroup>
     <PackageCertificateKeyFile>QuickShell_Dev.pfx</PackageCertificateKeyFile>
-    <!-- Provide via user environment/profile (for example in launchSettings.json or CI secrets), not source control. -->
     <PackageCertificatePassword>$(QuickShellPackageCertificatePassword)</PackageCertificatePassword>
   </PropertyGroup>
 

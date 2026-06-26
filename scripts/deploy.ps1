@@ -202,26 +202,21 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Local CmdPal SDK build failed with exit code $LASTEXITCODE"
         }
-        $useLocalSdk = $true
+        Write-Warning 'Local PowerToys SDK built, but QuickShell uses NuGet by default to avoid duplicate Toolkit assemblies. Hover actions require a dedicated local-SDK build profile.'
     }
     else {
         Write-Warning @"
 Local PowerToys SDK not found at $localToolkit.
-QuickShell will use NuGet Microsoft.CommandPalette.Extensions, which does not include hover action APIs.
-Clone/build PowerToys at A:\PowerToys and rerun deploy to opt in with UseLocalCmdPalSdk=true.
+QuickShell will use NuGet Microsoft.CommandPalette.Extensions.
 "@
-    }
-
-    $localSdkArg = @()
-    if ($useLocalSdk) {
-        $localSdkArg = @('/p:UseLocalCmdPalSdk=true')
     }
 
     Write-Host "Building signed MSIX ($Configuration|x64)..."
     & $msbuild (Join-Path $ProjectDir 'QuickShell.csproj') `
         /p:Configuration=$Configuration `
         /p:Platform=x64 `
-        @localSdkArg `
+        /p:UseLocalCmdPalSdk=false `
+        /p:GenerateAppxPackageOnBuild=true `
         /p:PackageCertificateThumbprint=$thumbprint `
         /p:PackageCertificateKeyFile= `
         /p:PackageCertificatePassword= `

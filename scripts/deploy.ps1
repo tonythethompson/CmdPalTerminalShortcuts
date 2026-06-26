@@ -203,14 +203,14 @@ try {
             throw "UseLocalCmdPalSdk requires a PowerToys checkout at $powerToysRoot."
         }
 
-        Write-Host 'Building local Command Palette SDK (hover APIs)...'
+        Write-Host 'Building local Command Palette SDK...'
         & $msbuild $localToolkit /p:Configuration=$Configuration /p:Platform=x64 /t:Build /v:minimal | Out-Host
         if ($LASTEXITCODE -ne 0) {
             throw "Local CmdPal SDK build failed with exit code $LASTEXITCODE"
         }
     }
     elseif (Test-Path $localToolkit) {
-        Write-Host 'Skipping local PowerToys SDK (NuGet CmdPal SDK). Pass -UseLocalCmdPalSdk for hover-action APIs.' -ForegroundColor DarkGray
+        Write-Host 'Skipping local PowerToys SDK (NuGet CmdPal SDK). Pass -UseLocalCmdPalSdk to build against local PowerToys.' -ForegroundColor DarkGray
     }
     else {
         Write-Warning @"

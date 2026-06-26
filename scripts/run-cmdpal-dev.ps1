@@ -12,7 +12,7 @@
     Shortcut data lives at %LOCALAPPDATA%\QuickShell\shortcuts.json (unchanged by refactor).
 
 .PARAMETER UseLocalSdk
-    Build Quick Shell against the local PowerToys CmdPal SDK (hover-action APIs).
+    Build Quick Shell against the local PowerToys CmdPal SDK.
     Requires A:\PowerToys checkout. Do not use with retail PowerToys CmdPal.
 
 .PARAMETER SkipDeploy
@@ -151,7 +151,7 @@ try {
     Write-Host "Shortcuts file: $env:LOCALAPPDATA\QuickShell\shortcuts.json" -ForegroundColor DarkGray
 
     if ($UseLocalSdk) {
-        Write-Host 'Built with local CmdPal SDK (hover actions). Use the PowerToys dev CmdPal build.' -ForegroundColor DarkGray
+        Write-Host 'Built with local CmdPal SDK. Use the PowerToys dev CmdPal build.' -ForegroundColor DarkGray
     }
 }
 finally {

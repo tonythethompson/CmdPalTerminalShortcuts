@@ -19,10 +19,10 @@ QuickShell/obj/
 QuickShell/setup-x64.iss
 QuickShell/setup-arm64.iss
 
-# Store screenshot workflow (generated locally; README assets Screenshot_1–3 stay tracked)
-QuickShell/Assets/StoreScreenshots/raw/
-QuickShell/Assets/StoreScreenshots/prepared/
-QuickShell/Assets/StoreScreenshots/shortcuts-backup.json
+# Store screenshot workflow (local only; README assets Screenshot_1–3 stay tracked)
+QuickShell/Assets/StoreScreenshots/
+scripts/store-screenshots.ps1
+dev-shortcuts.json
 QuickShell/BundleArtifacts/
 
 # Local MSIX/bundle inspection scratch
@@ -32,6 +32,3 @@ _msbuild_bundle/
 _msix_inspect/
 _upload_inspect/
 _upload.zip
-scripts/store-screenshots.ps1
-dev-shortcuts.json
-scripts/store-screenshots.ps1

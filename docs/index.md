@@ -24,7 +24,7 @@ description: Quick Shell opens saved project folders from PowerToys Command Pale
   </div>
 </div>
 
-## Features
+<p class="section-label">Features</p>
 
 <div class="card-grid">
   <a class="card-link" href="{{ '/install/' | relative_url }}">
@@ -71,9 +71,8 @@ description: Quick Shell opens saved project folders from PowerToys Command Pale
   </a>
 </div>
 
-## See it in action
-
-<p class="screenshot-hint">Click any screenshot to enlarge</p>
+<p class="section-label">Screenshots</p>
+<p class="screenshot-hint">Click to enlarge</p>
 
 <div class="screenshot-grid">
   <img src="https://raw.githubusercontent.com/tonythethompson/QuickShell/master/QuickShell/Assets/Screenshot_1.png" alt="Quick Shell shortcut list with context menu open" loading="lazy">
@@ -81,7 +80,7 @@ description: Quick Shell opens saved project folders from PowerToys Command Pale
   <img src="https://raw.githubusercontent.com/tonythethompson/QuickShell/master/QuickShell/Assets/Screenshot_3.png" alt="Quick Shell settings and terminal profile configuration" loading="lazy">
 </div>
 
-## Requirements
+<p class="section-label">Requirements</p>
 
 Quick Shell requires:
 

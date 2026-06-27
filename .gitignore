@@ -32,3 +32,4 @@ _msbuild_bundle/
 _msix_inspect/
 _upload_inspect/
 _upload.zip
+scripts/store-screenshots.ps1

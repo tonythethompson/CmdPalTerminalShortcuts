@@ -13,7 +13,9 @@ Save directories you use every day, open them in whichever terminal you actually
 - **Run a command on open** — start dev servers, scripts, or anything else automatically
 - **Favorite shortcuts** so they stay at the top of your list
 - **Create and edit shortcuts in Command Palette** — no hand-editing JSON required
-- **Import and export shortcuts** as JSON for backup, sharing, or moving to another PC
+- **Undo and redo** shortcut edits from the list, settings row, or **Ctrl+Z** / **Ctrl+Y**
+- **Section headers** in your shortcut list to group projects
+- **Import and export shortcuts** as JSON from **Quick Shell settings** (backup, sharing, migration)
 - **Open elevated** when you need admin — from the ⋯ menu or with **Ctrl+Enter**
 - **Search from the root palette** — type a home keyword like `api` and matching shortcuts appear without opening the extension first
 
@@ -30,7 +32,9 @@ Quick Shell reads **Windows Terminal** and **Intelligent Terminal** `settings.js
 | **Terminal application** | Host executable (`wt.exe` or `wtai.exe`) for Default shortcuts and profile launches |
 | **Default profile** | Profile used when a shortcut’s terminal is set to **Default** |
 
-Per-shortcut **profile** choices stay on each shortcut in the editor.
+Per-shortcut **profile** choices stay on each shortcut in the editor. Host options include **Let Windows choose** and **Windows Console Host** for classic `cmd` / PowerShell launches.
+
+Default **terminal application** and **default profile** are saved to `%LOCALAPPDATA%\QuickShell\settings.json` and survive reloads.
 
 After you install a new terminal or edit profiles, use **Refresh terminal list** in **Quick Shell settings** or the **↻** button next to the terminal picker when creating or editing a shortcut.
 
@@ -61,55 +65,60 @@ Get the latest **x64** or **ARM64** installer from [GitHub Releases](https://git
 2. Run **`Reload Command Palette Extension`**
 3. Search **`Quick Shell`**
 
-You should see **Quick Shell** with the subtitle *Open saved folders in your terminal*.
-
-> **Tip:** If the extension does not appear, confirm Command Palette is on in PowerToys → Command Palette, then run **Reload Command Palette Extension** again.
+You should see **Quick Shell** with the subtitle *Open saved folders in any terminal you use*.
 
 ---
 
 ## Quick start
 
-1. Open Command Palette and search **Quick Shell**
+Open Command Palette, search **Quick Shell**, and you’re in.
 
-   ![Shortcut list with context menu](QuickShell/Assets/Screenshot_1.png)
+### 1. Browse shortcuts — **Ctrl+K** for everything else
 
-2. **⋯** on any shortcut → **Edit**, or create a new shortcut
+Search, favorite, edit, duplicate, undo, and run — all from the list and its context menu.
 
-   ![Shortcut editor](QuickShell/Assets/Screenshot_2.png)
+![Shortcut list with the context menu open](QuickShell/Assets/Screenshot_1.png)
 
-3. Open **Settings** from any row’s **⋯** menu (or the home **Quick Shell** menu)
+### 2. Edit in place — folder, command, terminal, admin
 
-   ![Quick Shell settings](QuickShell/Assets/Screenshot_3.png)
+No JSON required. Pick a folder, optional command, profile, and whether to launch elevated.
 
-4. Pick a folder, name it, and save — then select a shortcut to open it in your terminal
+![Shortcut editor](QuickShell/Assets/Screenshot_2.png)
 
-Your shortcuts are stored at:
+### 3. Settings — defaults, backup, import
 
-`%LOCALAPPDATA%\QuickShell\shortcuts.json`
+Set your default terminal host and profile, export a backup, or import shortcuts from another PC. **Merge** keeps yours and adds new names; **Replace all** swaps the whole file.
 
-The app creates this file on first run. You can edit it in any text editor, or manage shortcuts entirely from Command Palette.
+![Quick Shell settings](QuickShell/Assets/Screenshot_3.png)
+
+**Create shortcut** is at the top of the list (**Ctrl+N**). **Quick Shell settings** is the row below it — or use **⋯** → **Quick Shell settings** on any shortcut.
+
+Your shortcuts live at `%LOCALAPPDATA%\QuickShell\shortcuts.json`. The app creates this on first run; you can also manage everything from Command Palette.
+
+> **Tip:** If the extension does not appear, confirm Command Palette is on in PowerToys → Command Palette, then run **Reload Command Palette Extension** again.
 
 ---
 
 ## Everyday usage
 
-Open the **⋯** menu on any shortcut (or press **Ctrl+K**) for actions like edit, favorite, duplicate, and elevated launch.
+Open the **⋯** menu on any shortcut (or press **Ctrl+K**) for edit, favorite, duplicate, undo, and elevated launch.
 
 | What you want | How |
 | --- | --- |
-| Open a saved folder | Search **Quick Shell**, pick a shortcut |
+| Open a saved folder | Search **Quick Shell**, pick a shortcut, **Enter** |
 | Jump straight to a shortcut | Type its **home keyword** at the Command Palette home screen (e.g. `api`) |
-| Favorite a shortcut | **⋯** → **Favorite**, or **Ctrl+F** (star badge on favorited items) |
-| Reorder favorites | **⋯** → **Move favorite up** / **Move favorite down** — or **Move favorite to top** / **Move favorite to bottom** when not already at an edge |
-| Reload after editing `shortcuts.json` by hand | Changes load automatically the next time Quick Shell reads the file |
-| Refresh terminal list after installing a shell | **Quick Shell settings** → **Refresh terminal list**, or **↻** in the shortcut editor |
-| Back up or move shortcuts | **Quick Shell settings** → **Export shortcuts** / **Import shortcuts**, or the same actions on the home **Quick Shell** **⋯** menu |
-| Finish a conflicting import | **Quick Shell settings** — merge/replace prompt appears there when needed |
-| Undo recent edits | Select any shortcut (or **Quick Shell settings**) → **Ctrl+Z** / **Ctrl+Y**, or **⋯** → **Undo** / **Redo** |
-| Create a shortcut | **⋯** on any shortcut or the home **Quick Shell** row → **Create new shortcut** |
-| Change terminal application or default profile | **Quick Shell settings**, or **⋯** → **Quick Shell settings** |
-| Open once as admin | Select a shortcut → **⋯** → **Open as administrator**, or press **Ctrl+Enter** |
-| Always open as admin | Set `"RunAsAdmin": true` on that shortcut (see below) |
+| Create a shortcut | **Create shortcut** at the top of the list (**Ctrl+N**), or **⋯** → **Create shortcut** |
+| Favorite a shortcut | **⋯** → **Favorite**, or **Ctrl+F** |
+| Reorder favorites | **⋯** → **Move favorite up** / **down** / **to top** / **to bottom** |
+| Edit a shortcut | **⋯** → **Edit**, or **Ctrl+E** |
+| Undo / redo | Select a row → **Ctrl+Z** / **Ctrl+Y**, or **⋯** → **Undo** / **Redo** |
+| Open once as admin | **⋯** → **Run as Admin**, or **Ctrl+Enter** |
+| Always open as admin | Enable **Launch elevated** in the editor, or `"RunAsAdmin": true` in JSON |
+| Change default terminal or profile | Open **Quick Shell settings** (list row or **⋯** on any shortcut) |
+| Refresh terminal list | **Quick Shell settings** → **Refresh terminal list**, or **↻** in the editor |
+| Back up or move shortcuts | **Quick Shell settings** → **Export** / **Import** |
+| Resolve import conflicts | **Merge** (keep yours, add new, rename duplicates) or **Replace all** (file only) |
+| Reload after hand-editing JSON | Changes load automatically when Quick Shell reads the file |
 
 ---
 
@@ -196,6 +205,17 @@ cd QuickShell
 ```
 
 Then run **Reload Command Palette Extension** in Command Palette.
+
+### Store listing screenshots (contributors)
+
+Regenerate README and Partner Center images:
+
+```powershell
+.\scripts\store-screenshots.ps1 -Mode Capture   # 1. list  2. edit  3. settings
+.\scripts\store-screenshots.ps1 -Mode Prepare   # letterbox + update Screenshot_1–3.png
+```
+
+Optional: import [`dev-shortcuts.json`](dev-shortcuts.json) (merge) to run those scripts as **pwsh** shortcuts from CmdPal — update **Directory** if your clone is not `A:\QuickShell`.
 
 ---
 

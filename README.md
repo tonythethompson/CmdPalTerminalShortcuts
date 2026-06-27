@@ -49,13 +49,17 @@ After you install a new terminal or edit profiles, use **Refresh terminal list**
 
 ## Install
 
-### Option 1 — WinGet (easiest)
+### Option 1 — Microsoft Store (recommended)
+
+[Get Quick Shell from the Microsoft Store](https://apps.microsoft.com/detail/9PC8S6LNRT3R) (Store ID: `9PC8S6LNRT3R`).
+
+### Option 2 — WinGet
 
 ```powershell
 winget install tonythethompson.QuickShell
 ```
 
-### Option 2 — Download an installer
+### Option 3 — Download an installer
 
 Get the latest **x64** or **ARM64** installer from [GitHub Releases](https://github.com/tonythethompson/QuickShell/releases).
 

@@ -15,9 +15,16 @@ Before installing, ensure you have **PowerToys** with **Command Palette** enable
 
 The easiest way to install and stay updated:
 
-1. Open the **Microsoft Store** on your PC
-2. Search for **Quick Shell**
-3. Click **Install**
+1. Open [**Quick Shell in the Microsoft Store**](https://apps.microsoft.com/detail/9PC8S6LNRT3R){:target="_blank"} (Store ID: `9PC8S6LNRT3R`)
+2. Click **Install**
+
+Or search **Quick Shell** in the Store app.
+
+<div class="callout">
+  <strong>Command Palette extensions in the Store:</strong> You can also browse related extensions with the
+  <a href="ms-windows-store://assoc/?Tags=AppExtension-com.microsoft.commandpalette">Command Palette extension tag</a>
+  in the Microsoft Store (opens the Store app on Windows).
+</div>
 
 ### WinGet (Command Line)
 

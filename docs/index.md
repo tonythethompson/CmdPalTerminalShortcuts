@@ -83,11 +83,21 @@ description: Quick Shell opens saved project folders from PowerToys Command Pale
 
 <p class="section-label">Requirements</p>
 
-Quick Shell requires:
-
-- **Windows 10** version 2004 or later (Windows 11 recommended)
-- **PowerToys** with [Command Palette](https://learn.microsoft.com/windows/powertoys/install) enabled
-
-Ready to save hours each week? [Install now]({{ '/install/' | relative_url }}) and create your first shortcut in under 2 minutes.
-
-Questions? Check out [Getting started]({{ '/getting-started/' | relative_url }}) or email [{{ site.author.email }}](mailto:{{ site.author.email }}).
+<div class="card-grid home-bottom-grid">
+  <div class="card">
+    <h3>Windows</h3>
+    <p>Windows 10 version 2004 or later. Windows 11 recommended.</p>
+  </div>
+  <div class="card">
+    <h3>PowerToys</h3>
+    <p><a href="https://learn.microsoft.com/windows/powertoys/install" target="_blank" rel="noopener">PowerToys</a> with Command Palette enabled.</p>
+  </div>
+  <div class="card">
+    <h3>Get going</h3>
+    <p><a href="{{ '/install/' | relative_url }}">Install now</a> and create your first shortcut in under two minutes.</p>
+  </div>
+  <div class="card">
+    <h3>Questions?</h3>
+    <p><a href="{{ '/getting-started/' | relative_url }}">Getting started</a> or email <a href="mailto:{{ site.author.email }}">{{ site.author.email }}</a>.</p>
+  </div>
+</div>

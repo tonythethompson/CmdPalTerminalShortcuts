@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Get started
 description: Create shortcuts, use home keywords, and manage Quick Shell from Command Palette.
 ---

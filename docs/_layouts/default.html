@@ -23,7 +23,7 @@
       </div>
     </header>
 
-    <main class="site-main wrap">
+    <main class="site-main wrap{% if page.layout == 'page' %} page-wrap{% endif %}">
       {{ content }}
     </main>
 
@@ -34,6 +34,35 @@
       <p class="lightbox-caption" id="lightbox-caption"></p>
       <span class="lightbox-hint">Esc or click outside to close</span>
     </div>
+
+    <script>
+    (function () {
+      var article = document.getElementById('page-content');
+      var list = document.getElementById('page-toc-list');
+      var tocNav = document.getElementById('sidebar-toc');
+      if (article && list && tocNav) {
+        var headings = article.querySelectorAll('h2, h3');
+        if (headings.length < 2) {
+          tocNav.hidden = true;
+        } else {
+          headings.forEach(function (heading) {
+            if (!heading.id) {
+              heading.id = heading.textContent.trim().toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-');
+            }
+            var item = document.createElement('li');
+            if (heading.tagName === 'H3') item.className = 'toc-h3';
+            var link = document.createElement('a');
+            link.href = '#' + heading.id;
+            link.textContent = heading.textContent;
+            item.appendChild(link);
+            list.appendChild(item);
+          });
+        }
+      }
+    })();
+  </script>
 
     <script>
     (function () {

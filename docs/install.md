@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Install
 description: Install Quick Shell from the Microsoft Store, WinGet, or GitHub Releases.
 ---

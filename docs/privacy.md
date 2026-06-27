@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Privacy
 description: Quick Shell privacy policy — local data only, no analytics, no account.
 ---

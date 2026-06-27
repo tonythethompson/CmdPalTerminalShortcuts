@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Support
 description: Contact, bug reports, and feature requests for Quick Shell.
 ---

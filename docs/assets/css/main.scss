@@ -12,7 +12,8 @@ $text-muted:  #9b968f;
 $accent:      #c4882a;
 $border:      #d0cbc3;
 $border-mid:  #b8b3ab;
-$max-width:   1000px;
+$max-width:   1140px;
+$page-sidebar: 260px;
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -99,6 +100,126 @@ a:hover { color: darken($accent, 12%); }
   padding: 3rem 1.5rem 4rem;
 }
 
+.site-main.page-wrap {
+  max-width: $max-width;
+}
+
+// ── Page layout (inner docs) ────────────────────────────
+
+.page-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) $page-sidebar;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.page-content {
+  min-width: 0;
+  background: $panel;
+  border: 1px solid $border;
+  padding: 2.5rem 2.75rem;
+}
+
+.page-sidebar {
+  position: sticky;
+  top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sidebar-panel {
+  background: $panel;
+  border: 1px solid $border;
+  padding: 1.25rem 1.35rem;
+}
+
+.sidebar-panel-muted {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.sidebar-heading {
+  margin: 0 0 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: $text-muted;
+}
+
+.sidebar-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    margin: 0 0 0.45rem;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: $text-mid;
+  }
+
+  a {
+    text-decoration: none;
+    font-weight: 500;
+    color: $text;
+
+    &:hover { color: $accent; }
+  }
+}
+
+.sidebar-links-compact li {
+  font-size: 0.82rem;
+  margin-bottom: 0.6rem;
+}
+
+.sidebar-toc {
+  background: $panel;
+  border: 1px solid $border;
+  padding: 1.25rem 1.35rem;
+}
+
+.sidebar-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    margin: 0 0 0.4rem;
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  a {
+    text-decoration: none;
+    color: $text-mid;
+    font-weight: 500;
+
+    &:hover { color: $accent; }
+  }
+
+  .toc-h3 {
+    padding-left: 0.85rem;
+
+    a {
+      font-size: 0.8rem;
+      font-weight: 400;
+    }
+  }
+}
+
+kbd {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 0.78em;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid $border-mid;
+  border-radius: 2px;
+  background: $bg;
+  color: $text;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
 // ── Footer ──────────────────────────────────────────────
 
 .site-footer {
@@ -131,7 +252,7 @@ a:hover { color: darken($accent, 12%); }
 
 .hero {
   padding: 2.5rem 0 3rem;
-  max-width: 680px;
+  max-width: none;
 }
 
 .hero h1 {
@@ -146,7 +267,7 @@ a:hover { color: darken($accent, 12%); }
 .lead {
   font-size: 1.05rem;
   color: $text-mid;
-  max-width: 540px;
+  max-width: 42rem;
   line-height: 1.8;
   margin: 0 0 2rem;
 }
@@ -264,7 +385,7 @@ h2.section-label {
 .card-grid {
   display: grid;
   gap: 1px;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   background: $border;
   border: 1px solid $border;
   margin: 0.5rem 0 2.5rem;
@@ -530,6 +651,25 @@ ul, ol {
 }
 
 // ── Responsive ──────────────────────────────────────────
+
+@media (max-width: 960px) {
+  .page-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .page-sidebar {
+    position: static;
+    order: -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .page-content {
+    padding: 1.75rem 1.5rem;
+  }
+}
 
 @media (max-width: 640px) {
   .site-header .wrap { gap: 1rem; }

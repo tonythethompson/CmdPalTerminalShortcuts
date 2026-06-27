@@ -1,0 +1,15 @@
+---
+layout: default
+---
+<div class="page-layout">
+  <article class="page-content" id="page-content">
+    {{ content }}
+  </article>
+  <aside class="page-sidebar" aria-label="Page navigation">
+    {% include sidebar.html %}
+    <nav class="sidebar-toc" id="sidebar-toc" aria-label="On this page">
+      <p class="sidebar-heading">On this page</p>
+      <ul id="page-toc-list"></ul>
+    </nav>
+  </aside>
+</div>

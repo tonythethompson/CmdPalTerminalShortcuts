@@ -26,6 +26,7 @@ permalink: pretty
 kramdown:
   input: GFM
   syntax_highlighter: rouge
+  auto_ids: true
 
 plugins:
   - jekyll-seo-tag

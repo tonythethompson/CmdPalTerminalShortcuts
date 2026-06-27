@@ -53,7 +53,7 @@ Quick Shell is a general productivity tool and is not directed at children under
 
 This policy may be updated when the product changes. The current version is published at:
 
-- https://tonythethompson.github.io/QuickShell/privacy/
+- https://quickshell.trackdub.com/privacy/
 - https://github.com/tonythethompson/QuickShell/blob/master/PRIVACY.md
 
 ## Contact

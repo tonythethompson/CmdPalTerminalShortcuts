@@ -214,7 +214,7 @@ MIT — see [LICENSE](LICENSE).
 
 ## Website
 
-[tonythethompson.github.io/QuickShell](https://tonythethompson.github.io/QuickShell/) — install steps, getting started, support, and privacy policy.
+[quickshell.trackdub.com](https://quickshell.trackdub.com/) — install steps, getting started, support, and privacy policy.
 
 ## Feedback
 

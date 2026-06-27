@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest an idea for Quick Shell
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like Quick Shell to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: How you work today, screenshots, or examples
+
+  - type: checkboxes
+    id: test
+    attributes:
+      label: Contribution
+      options:
+        - label: I can help test a preview build
+          required: false

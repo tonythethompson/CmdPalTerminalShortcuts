@@ -1,7 +1,13 @@
-# Quick Shell Privacy Policy
+---
+layout: default
+title: Privacy
+description: Quick Shell privacy policy — local data only, no analytics, no account.
+---
+
+# Privacy policy
 
 **Last updated:** June 26, 2026  
-**Publisher:** Tony Thompson ([tonythethompson](https://github.com/tonythethompson))  
+**Publisher:** Tony Thompson  
 **Product:** Quick Shell — a PowerToys Command Palette extension
 
 ## Summary
@@ -51,14 +57,11 @@ Quick Shell is a general productivity tool and is not directed at children under
 
 ## Changes
 
-This policy may be updated when the product changes. The current version is published at:
-
-- https://tonythethompson.github.io/QuickShell/privacy/
-- https://github.com/tonythethompson/QuickShell/blob/master/PRIVACY.md
+This policy may be updated when the product changes. The current version is always published on this site and in the [Quick Shell repository](https://github.com/tonythethompson/QuickShell).
 
 ## Contact
 
 Questions or privacy requests:
 
-- Email: tonythethompson@hotmail.com
-- GitHub: https://github.com/tonythethompson/QuickShell/issues
+- Email: [{{ site.author.email }}](mailto:{{ site.author.email }})
+- GitHub: [Open an issue](https://github.com/tonythethompson/QuickShell/issues)

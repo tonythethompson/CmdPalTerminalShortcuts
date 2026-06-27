@@ -1,0 +1,38 @@
+title: Quick Shell
+description: Open saved project folders from PowerToys Command Palette — in the terminal you already use.
+url: https://tonythethompson.github.io
+baseurl: /QuickShell
+lang: en-US
+
+author:
+  name: Tony Thompson
+  email: tonythethompson@hotmail.com
+
+github_username: tonythethompson
+repository: tonythethompson/QuickShell
+
+header_pages:
+  - title: Install
+    url: /install/
+  - title: Get started
+    url: /getting-started/
+  - title: Support
+    url: /support/
+  - title: Privacy
+    url: /privacy/
+
+markdown: kramdown
+permalink: pretty
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-feed
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md

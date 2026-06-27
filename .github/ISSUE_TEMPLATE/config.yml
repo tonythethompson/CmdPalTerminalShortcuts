@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Email support
+    url: mailto:tonythethompson@hotmail.com
+    about: Questions that are not a good fit for a public issue
+  - name: Documentation
+    url: https://tonythethompson.github.io/QuickShell/
+    about: Install, getting started, and troubleshooting

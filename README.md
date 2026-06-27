@@ -212,6 +212,10 @@ Then run **Reload Command Palette Extension** in Command Palette.
 
 MIT — see [LICENSE](LICENSE).
 
+## Website
+
+[tonythethompson.github.io/QuickShell](https://tonythethompson.github.io/QuickShell/) — install steps, getting started, support, and privacy policy.
+
 ## Feedback
 
-[Open an issue](https://github.com/tonythethompson/QuickShell/issues) on GitHub for bugs, ideas, or questions.
+[Open an issue](https://github.com/tonythethompson/QuickShell/issues) on GitHub for bugs, ideas, or questions. Email: [tonythethompson@hotmail.com](mailto:tonythethompson@hotmail.com).

@@ -1,0 +1,67 @@
+name: Bug report
+description: Something is broken or not working as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please search [existing issues](https://github.com/tonythethompson/QuickShell/issues) first.
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Command Palette
+        2. Search Quick Shell
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 24H2
+    validations:
+      required: true
+
+  - type: input
+    id: powertoys
+    attributes:
+      label: PowerToys version
+      placeholder: e.g. 0.87.0
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install Quick Shell?
+      options:
+        - Microsoft Store
+        - WinGet
+        - GitHub release / MSIX
+        - Built from source
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, logs, or `%LOCALAPPDATA%\QuickShell\` details if relevant

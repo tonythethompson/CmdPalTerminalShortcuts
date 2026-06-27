@@ -15,7 +15,7 @@ Press **Win + Alt + Space** to open PowerToys Command Palette, search for **Quic
 ## Create your first shortcut
 
 1. In Quick Shell, select **Create shortcut** (or press **Ctrl+N**)
-2. Enter a **name** (e.g., "My Project") and the **folder path** you want to save
+2. Pick a **folder** — use **Browse folder** or **Paste path**. The **name** fills in from the folder name (e.g., `MyApp` from `C:\Projects\MyApp`); change it if you want something else
 3. (Optional) Set:
    - A **command** to run when opening (e.g., `npm start`)
    - Your preferred **terminal profile** (Windows Terminal, PowerShell, WSL, etc.)

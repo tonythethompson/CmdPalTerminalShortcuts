@@ -684,27 +684,12 @@ internal sealed partial class ShortcutForm : FormContent
               "spacing": "Small",
               "$when": "${ShowRestoredDraftNote}"
             },
-            {{SettingsCardJson.FieldGroup("Name", "Shown in your Quick Shell list. Leave blank to use the folder name.", """
-            {
-              "type": "Input.Text",
-              "id": "Name",
-              "value": "${Name}"
-            }
-            """)}},
-            {{SettingsCardJson.FieldGroup("Home keyword (optional)", "Type this at Command Palette home to jump straight to this shortcut.", """
-            {
-              "type": "Input.Text",
-              "id": "Abbreviation",
-              "placeholder": "e.g. api",
-              "value": "${Abbreviation}"
-            }
-            """)}},
             {
               "type": "Container",
               "spacing": "Medium",
               "items": [
                 {{SettingsCardJson.FieldLabel("Folder path")}},
-                {{SettingsCardJson.FieldHelp("Folder opened when you run this shortcut.")}},
+                {{SettingsCardJson.FieldHelp("Folder opened when you run this shortcut. Browse or paste to pick a folder.")}},
                 {
                   "type": "Input.Text",
                   "id": "Directory",
@@ -733,6 +718,21 @@ internal sealed partial class ShortcutForm : FormContent
                 }
               ]
             },
+            {{SettingsCardJson.FieldGroup("Name", "Shown in your Quick Shell list. Filled in from the folder name when you browse or paste—you can edit it.", """
+            {
+              "type": "Input.Text",
+              "id": "Name",
+              "value": "${Name}"
+            }
+            """)}},
+            {{SettingsCardJson.FieldGroup("Home keyword (optional)", "Type this at Command Palette home to jump straight to this shortcut.", """
+            {
+              "type": "Input.Text",
+              "id": "Abbreviation",
+              "placeholder": "e.g. api",
+              "value": "${Abbreviation}"
+            }
+            """)}},
             {{SettingsCardJson.FieldGroup("Command (optional)", "Optional command or script run after the terminal opens in this folder.", """
             {
               "type": "Input.Text",

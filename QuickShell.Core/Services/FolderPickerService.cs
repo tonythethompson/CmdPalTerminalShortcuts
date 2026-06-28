@@ -24,12 +24,7 @@ internal static class FolderPickerService
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
 
-        if (!thread.Join(DialogTimeout))
-        {
-            return null;
-        }
-
-        return selected;
+        return thread.Join(DialogTimeout) ? selected : null;
     }
 
     private static string? PickFolderOnStaThread(string? initialDirectory, nint ownerHandle)

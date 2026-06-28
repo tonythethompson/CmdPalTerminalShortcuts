@@ -22,6 +22,21 @@ internal sealed class QuickShellSettingsReader
     public string DefaultProfileId =>
         ReadDefaultProfileId(TerminalApplicationId);
 
+    public void SaveTerminalDefaults(string terminalApplicationId, string defaultProfileId)
+    {
+        var app = EnsureValidTerminalApplication(terminalApplicationId);
+        var profile = EnsureValidDefaultProfile(app, defaultProfileId);
+        var directory = Path.GetDirectoryName(SettingsPath)!;
+        Directory.CreateDirectory(directory);
+        var json =
+            $$"""{"terminalApplication":"{{EscapeJson(app)}}","defaultProfile":"{{EscapeJson(profile)}}"}""";
+        File.WriteAllText(SettingsPath, json);
+        TerminalCatalog.InvalidateCache();
+    }
+
+    public string ConfigDirectory =>
+        Path.GetDirectoryName(SettingsPath)!;
+
     public string ReadTerminalApplicationId()
     {
         var raw = ReadSetting(TerminalApplicationSettingId);
@@ -67,6 +82,9 @@ internal sealed class QuickShellSettingsReader
 
         return null;
     }
+
+    private static string EscapeJson(string value) =>
+        value.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     private static string EnsureValidTerminalApplication(string? value)
     {

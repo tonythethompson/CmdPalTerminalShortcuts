@@ -455,6 +455,7 @@ internal sealed partial class ShortcutForm : FormContent
             draft.Command,
             draft.LaunchTarget,
             draft.RunAsAdmin,
+            QuickShellRuntimeServices.Shortcuts,
             _onSaved);
 
         if (!result.Success)

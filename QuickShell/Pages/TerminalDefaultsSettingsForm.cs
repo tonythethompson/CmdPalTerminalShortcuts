@@ -71,8 +71,8 @@ internal sealed partial class TerminalDefaultsSettingsForm : FormContent
     {
         var app = _settingsManager.TerminalApplicationId;
         var profile = _settingsManager.DefaultProfileId;
-        var appChoices = SettingsCardJson.BuildChoicesJson(TerminalCatalog.GetTerminalApplicationChoices());
-        var profileChoices = SettingsCardJson.BuildChoicesJson(TerminalCatalog.GetDefaultProfileChoices(app));
+        var appChoices = SettingsCardJson.BuildChoicesJson(TerminalCatalogChoices.GetTerminalApplicationChoices());
+        var profileChoices = SettingsCardJson.BuildChoicesJson(TerminalCatalogChoices.GetDefaultProfileChoices(app));
         var bodyParts = new List<string>
         {
             SettingsCardJson.SectionHeader("Terminal defaults"),

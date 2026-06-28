@@ -82,7 +82,7 @@ internal static class ShortcutValidation
     public static bool TryValidateForImport(TerminalShortcut shortcut, out string error) =>
         TryValidate(shortcut, requireDirectoryExists: false, out error);
 
-    public static bool TryValidateUniqueName(string name, string? originalName, out string error)
+    public static bool TryValidateUniqueName(string name, string? originalName, IShortcutRepository shortcuts, out string error)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -97,7 +97,7 @@ internal static class ShortcutValidation
             return true;
         }
 
-        var existing = QuickShellRuntimeServices.Shortcuts.GetByName(name);
+        var existing = shortcuts.GetByName(name);
         if (existing is not null)
         {
             error = $"A shortcut named '{name}' already exists.";

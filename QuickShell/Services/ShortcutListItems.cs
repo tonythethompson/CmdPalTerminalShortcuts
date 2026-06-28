@@ -18,7 +18,7 @@ internal static class ShortcutListItems
             Subtitle = ShortcutDisplay.BuildSubtitle(shortcut),
         };
 
-        var tags = ShortcutDisplay.BuildTags(shortcut);
+        var tags = ShortcutDisplayTags.BuildTags(shortcut);
         if (tags is not null)
         {
             item.Tags = tags;

@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Models;
 
 namespace QuickShell.Services;
@@ -75,72 +74,45 @@ internal static class TerminalCatalog
         WtProfilesService.InvalidateCache();
     }
 
-    public static List<ChoiceSetSetting.Choice> GetTerminalApplicationChoices()
-    {
-        var choices = new List<ChoiceSetSetting.Choice>
-        {
-            new("Let Windows choose", TerminalHostIds.LetWindowsChoose),
-            new("Windows Terminal", TerminalHostIds.WindowsTerminal),
-            new("Windows Console Host", TerminalHostIds.WindowsConsoleHost),
-        };
-
-        if (HasTerminalApplication(TerminalHostIds.IntelligentTerminal))
-        {
-            choices.Add(new ChoiceSetSetting.Choice("Intelligent Terminal", TerminalHostIds.IntelligentTerminal));
-        }
-
-        return choices;
-    }
-
-    public static List<ChoiceSetSetting.Choice> GetDefaultProfileChoices(string terminalApplicationId)
+    public static IReadOnlyList<string> GetDefaultProfileIds(string terminalApplicationId)
     {
         if (!TerminalHostIds.UsesWindowsTerminalProfiles(terminalApplicationId))
         {
-            return GetConsoleHostProfileChoices();
+            return GetConsoleHostProfileIds();
         }
 
         var effectiveApp = TerminalHostIds.ResolveEffectiveApplication(terminalApplicationId);
-        var choices = new List<ChoiceSetSetting.Choice>
-        {
-            new("Default profile for this app", TerminalHostIds.DefaultProfile),
-        };
-
+        var ids = new List<string> { TerminalHostIds.DefaultProfile };
         foreach (var profile in WtProfilesService.GetProfilesForApplication(effectiveApp))
         {
-            choices.Add(new ChoiceSetSetting.Choice(profile.Name, profile.Name));
+            ids.Add(profile.Name);
         }
 
-        return choices;
+        return ids;
     }
 
-    private static List<ChoiceSetSetting.Choice> GetConsoleHostProfileChoices()
+    private static IReadOnlyList<string> GetConsoleHostProfileIds()
     {
         EnsureCached();
-        var choices = new List<ChoiceSetSetting.Choice>
-        {
-            new("Default profile for this app", TerminalHostIds.DefaultProfile),
-        };
+        var ids = new List<string> { TerminalHostIds.DefaultProfile };
 
         if (_executables!.PowerShell)
         {
-            choices.Add(new ChoiceSetSetting.Choice("PowerShell", "powershell"));
+            ids.Add("powershell");
         }
 
         if (_executables.Pwsh)
         {
-            choices.Add(new ChoiceSetSetting.Choice("PowerShell 7", "pwsh"));
+            ids.Add("pwsh");
         }
 
         if (_executables.Cmd)
         {
-            choices.Add(new ChoiceSetSetting.Choice("Command Prompt", "cmd"));
+            ids.Add("cmd");
         }
 
-        return choices;
+        return ids;
     }
-
-    public static List<ChoiceSetSetting.Choice> GetSettingsChoices() =>
-        GetTerminalApplicationChoices();
 
     public static bool HasTerminalApplication(string terminalApplicationId)
     {

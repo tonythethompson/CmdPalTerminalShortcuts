@@ -76,6 +76,7 @@ internal static class ShortcutFormSave
         string command,
         string launchTarget,
         bool runAsAdmin,
+        IShortcutRepository shortcuts,
         Action? onSaved)
     {
         if (string.IsNullOrWhiteSpace(directory))
@@ -94,7 +95,7 @@ internal static class ShortcutFormSave
         }
 
         name = name.Trim();
-        var resolvedName = QuickShellRuntimeServices.Shortcuts.ResolveAvailableName(name, originalName);
+        var resolvedName = shortcuts.ResolveAvailableName(name, originalName);
         var renamedForConflict = !string.Equals(resolvedName, name, StringComparison.OrdinalIgnoreCase);
 
         var shortcut = new TerminalShortcut
@@ -115,7 +116,7 @@ internal static class ShortcutFormSave
 
         try
         {
-            QuickShellRuntimeServices.Shortcuts.Upsert(shortcut, originalName);
+            shortcuts.Upsert(shortcut, originalName);
             onSaved?.Invoke();
             var message = renamedForConflict
                 ? $"Saved shortcut as '{resolvedName}' (name was already in use)."

@@ -38,7 +38,7 @@ internal sealed partial class ShortcutRepository : IShortcutRepository, IDisposa
     private DateTime _lastWriteTimeUtc = DateTime.MinValue;
     private bool _configEnsured;
     private bool _persistPending;
-    private Timer? _persistTimer;
+    private System.Threading.Timer? _persistTimer;
     private bool _disposed;
 
     public string ConfigDirectory =>
@@ -567,7 +567,7 @@ internal sealed partial class ShortcutRepository : IShortcutRepository, IDisposa
             throw new InvalidOperationException(validationError);
         }
 
-        if (!ShortcutValidation.TryValidateUniqueName(shortcut.Name, originalName, out validationError))
+        if (!ShortcutValidation.TryValidateUniqueName(shortcut.Name, originalName, this, out validationError))
         {
             throw new InvalidOperationException(validationError);
         }
@@ -1057,7 +1057,7 @@ internal sealed partial class ShortcutRepository : IShortcutRepository, IDisposa
     private void SchedulePersistLocked()
     {
         _persistPending = true;
-        _persistTimer ??= new Timer(_ => WithLock(FlushPendingPersistLocked), null, Timeout.Infinite, Timeout.Infinite);
+        _persistTimer ??= new System.Threading.Timer(_ => WithLock(FlushPendingPersistLocked), null, Timeout.Infinite, Timeout.Infinite);
         _persistTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
     }
 

@@ -1,5 +1,4 @@
 using System.Globalization;
-using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Models;
 
 namespace QuickShell.Services;
@@ -33,30 +32,6 @@ internal static class ShortcutDisplay
         }
 
         return string.Join(" · ", parts);
-    }
-
-    public static Tag[]? BuildTags(TerminalShortcut shortcut)
-    {
-        var tags = new List<Tag>();
-        if (shortcut.RunAsAdmin)
-        {
-            tags.Add(new Tag(string.Empty)
-            {
-                Icon = new IconInfo(ShortcutGlyphs.AdminShield),
-                ToolTip = "Always run as administrator",
-            });
-        }
-
-        if (shortcut.IsPinned)
-        {
-            tags.Add(new Tag(string.Empty)
-            {
-                Icon = new IconInfo(ShortcutGlyphs.FavoriteFilled),
-                ToolTip = "Favorite",
-            });
-        }
-
-        return tags.Count == 0 ? null : tags.ToArray();
     }
 
     public static string FormatTerminal(string? launchTargetId) =>

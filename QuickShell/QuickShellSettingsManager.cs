@@ -23,7 +23,7 @@ internal sealed class QuickShellSettingsManager
 
         _terminalApplicationSetting = new ChoiceSetSetting(
             TerminalApplicationSettingId,
-            TerminalCatalog.GetTerminalApplicationChoices())
+            TerminalCatalogChoices.GetTerminalApplicationChoices())
         {
             Label = "Terminal application",
             Description = "The terminal host used for Default shortcuts and profile launches. Matches Windows Terminal's \"Default terminal application\" setting.",
@@ -31,7 +31,7 @@ internal sealed class QuickShellSettingsManager
 
         _defaultProfileSetting = new ChoiceSetSetting(
             DefaultProfileSettingId,
-            TerminalCatalog.GetDefaultProfileChoices(TerminalHostIds.WindowsTerminal))
+            TerminalCatalogChoices.GetDefaultProfileChoices(TerminalHostIds.WindowsTerminal))
         {
             Label = "Default profile",
             Description = "Profile used when a shortcut is set to Default. Per-shortcut profile choices stay on each shortcut.",
@@ -52,7 +52,7 @@ internal sealed class QuickShellSettingsManager
         }
 
         initialApp = EnsureValidTerminalApplication(initialApp);
-        _defaultProfileSetting.Choices = TerminalCatalog.GetDefaultProfileChoices(initialApp);
+        _defaultProfileSetting.Choices = TerminalCatalogChoices.GetDefaultProfileChoices(initialApp);
         initialProfile = EnsureValidDefaultProfile(initialApp, initialProfile);
 
         _settings.Update($$"""{"{{TerminalApplicationSettingId}}":"{{initialApp}}","{{DefaultProfileSettingId}}":"{{initialProfile}}"}""");
@@ -99,7 +99,7 @@ internal sealed class QuickShellSettingsManager
     public void RefreshTerminalChoices()
     {
         var app = TerminalApplicationId;
-        _terminalApplicationSetting.Choices = TerminalCatalog.GetTerminalApplicationChoices();
+        _terminalApplicationSetting.Choices = TerminalCatalogChoices.GetTerminalApplicationChoices();
         app = EnsureValidTerminalApplication(app);
         SyncDefaultProfileChoices();
         _settings.Update($$"""{"{{TerminalApplicationSettingId}}":"{{app}}","{{DefaultProfileSettingId}}":"{{DefaultProfileId}}"}""");
@@ -109,7 +109,7 @@ internal sealed class QuickShellSettingsManager
     private void SyncDefaultProfileChoices()
     {
         var app = EnsureValidTerminalApplication(_settings.GetSetting<string>(TerminalApplicationSettingId));
-        _defaultProfileSetting.Choices = TerminalCatalog.GetDefaultProfileChoices(app);
+        _defaultProfileSetting.Choices = TerminalCatalogChoices.GetDefaultProfileChoices(app);
 
         var current = _settings.GetSetting<string>(DefaultProfileSettingId);
         if (!_defaultProfileSetting.Choices.Any(c => c.Value.Equals(current, StringComparison.OrdinalIgnoreCase)))
@@ -160,7 +160,7 @@ internal sealed class QuickShellSettingsManager
         }
 
         if (TryExtractProfileName(normalized, out var profileName)
-            && TerminalCatalog.GetDefaultProfileChoices(terminalApplicationId)
+            && TerminalCatalogChoices.GetDefaultProfileChoices(terminalApplicationId)
                 .Any(c => c.Value.Equals(profileName, StringComparison.OrdinalIgnoreCase)))
         {
             return profileName;

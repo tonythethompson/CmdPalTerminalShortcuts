@@ -45,6 +45,10 @@
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\QuickShell.Core\QuickShell.Core.csproj" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(UseLocalCmdPalSdk)' != 'true'">
     <PackageReference Include="Microsoft.CommandPalette.Extensions" />
   </ItemGroup>

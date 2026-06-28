@@ -132,6 +132,7 @@ internal sealed partial class ShortcutDraftStore(IShortcutRepository shortcuts) 
             pending.Command,
             pending.LaunchTarget,
             pending.RunAsAdmin,
+            _shortcuts,
             onSaved);
 
         if (result.Success)

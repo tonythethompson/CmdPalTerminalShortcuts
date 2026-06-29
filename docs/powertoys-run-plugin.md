@@ -6,7 +6,7 @@ Third-party plugin that reads the same shortcuts and settings as the [Quick Shel
 
 ### From GitHub Releases
 
-1. Download `QuickShell.Run-x64.zip` or `QuickShell.Run-ARM64.zip` from [Releases](https://github.com/tonythethompson/QuickShell/releases).
+1. Download `QuickShell.Run-x64.zip` or `QuickShell.Run-ARM64.zip` from [Releases](https://github.com/tonythethompson/QuickShell/releases) (added in releases after v0.1.7.0; older tags are CmdPal installer only).
 2. Extract into:
 
    `%LOCALAPPDATA%\Microsoft\PowerToys\PowerToys Run\Plugins\QuickShell\`
@@ -25,9 +25,9 @@ Restart PowerToys after deploy.
 
 | Action | How |
 | --- | --- |
-| Browse shortcuts | **Alt+Space** → `qs ` |
-| Home keyword | **Alt+Space** → type keyword (e.g. `api`) |
-| Create / export / import | **Alt+Space** → `qs ` → pick a utility row, or use **PowerToys Settings → PowerToys Run → Quick Shell** |
+| Browse shortcuts | **Alt+Space** → `qs` (optionally `qs measure`, etc.) |
+| Home keyword in Run | **Alt+Space** → `qs` + keyword (e.g. `qs measure`) — not bare `measure` |
+| Create / export / import | **Alt+Space** → `qs` → pick a utility row, or use **PowerToys Settings → PowerToys Run → Quick Shell** |
 | Edit shortcut | Select shortcut → **→** context menu → **Edit shortcut** |
 | Run elevated | **Ctrl+Shift+Enter**, or context menu |
 

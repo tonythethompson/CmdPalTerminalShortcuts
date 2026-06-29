@@ -37,7 +37,7 @@ internal static class ShortcutDisplay
     public static string FormatTerminal(string? launchTargetId) =>
         TerminalCatalog.Resolve(launchTargetId).DisplayName;
 
-    private static string ShortenPath(string path)
+    public static string ShortenPathForDisplay(string path)
     {
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (path.StartsWith(userProfile, StringComparison.OrdinalIgnoreCase))
@@ -47,6 +47,8 @@ internal static class ShortcutDisplay
 
         return path;
     }
+
+    private static string ShortenPath(string path) => ShortenPathForDisplay(path);
 
     private static string FormatRelativeTime(DateTime utc)
     {

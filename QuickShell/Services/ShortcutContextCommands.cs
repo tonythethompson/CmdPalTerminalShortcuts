@@ -84,6 +84,7 @@ internal static class ShortcutContextCommands
 
         AddPreSettingsCommands(items, createShortcutCommand, onChanged);
         items.Add(CreateSettingsItem(settings));
+        items.AddRange(WorkspaceContextCommands.BuildForShortcut(shortcut, onChanged, settings));
 
         var deleteCommand = new DeleteShortcutCommand(shortcut.Name, onChanged);
         items.Add(WithShortcut(

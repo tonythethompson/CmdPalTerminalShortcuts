@@ -10,6 +10,7 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 {
     private readonly QuickShellSettingsManager _settings;
     private readonly CreateShortcutCommand _createShortcutCommand;
+    private readonly CreateWorkspaceCommand _createWorkspaceCommand;
     private readonly SearchDebouncer _searchDebouncer;
     private IListItem[] _items = [];
     private string _query = string.Empty;
@@ -17,16 +18,18 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 
     public QuickShellPage(
         QuickShellSettingsManager settings,
-        CreateShortcutCommand createShortcutCommand)
+        CreateShortcutCommand createShortcutCommand,
+        CreateWorkspaceCommand createWorkspaceCommand)
     {
         _settings = settings;
         _createShortcutCommand = createShortcutCommand;
+        _createWorkspaceCommand = createWorkspaceCommand;
         _searchDebouncer = new SearchDebouncer(ApplyQueryDebounced);
         Id = QuickShellNavigation.HomePageId;
         Icon = new IconInfo("\uE756");
         Title = "Quick Shell";
         Name = "Open";
-        PlaceholderText = "Search shortcuts by name, path, or command...";
+        PlaceholderText = "Search shortcuts and workspaces by name, path, or command...";
         EmptyContent = new CommandItem(_createShortcutCommand)
         {
             Title = "Create your first shortcut",
@@ -119,28 +122,33 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
             .OrderBy(s => s.PinOrder ?? int.MaxValue)
             .ToList();
         var items = new List<IListItem>();
-        items.AddRange(QuickShellPageActions.BuildItems(_createShortcutCommand, _settings, Reload));
+        items.AddRange(QuickShellPageActions.BuildItems(_createShortcutCommand, _createWorkspaceCommand, _settings, Reload));
 
         if (string.IsNullOrWhiteSpace(query))
         {
             var layout = QuickShellRuntimeServices.Shortcuts.GetLayout();
-            items.AddRange(ShortcutLayoutDisplay.BuildListItems(
-                layout,
-                shortcut => BuildShortcutItem(shortcut, pinnedInOrder)));
+            var workspaces = QuickShellRuntimeServices.Workspaces.GetWorkspaces();
+            items.AddRange(BuildHomeLayoutItems(layout, workspaces, pinnedInOrder));
         }
         else
         {
             var shortcuts = QuickShellRuntimeServices.Shortcuts.Search(query).ToArray();
+            var workspaces = QuickShellRuntimeServices.Workspaces.Search(query).ToArray();
             foreach (var shortcut in shortcuts)
             {
                 items.Add(BuildShortcutItem(shortcut, pinnedInOrder));
             }
 
-            if (shortcuts.Length == 0)
+            foreach (var workspace in workspaces)
+            {
+                items.Add(BuildWorkspaceItem(workspace));
+            }
+
+            if (shortcuts.Length == 0 && workspaces.Length == 0)
             {
                 items.Add(new ListItem(new NoOpCommand())
                 {
-                    Title = "No matching shortcuts",
+                    Title = "No matching shortcuts or workspaces",
                     Subtitle = "Try a different search",
                     MoreCommands =
                     [
@@ -170,6 +178,69 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
                 moveVisibility: moveVisibility));
 
         item.MoreCommands = moreCommands.ToArray();
+
         return item;
+    }
+
+    private IEnumerable<IListItem> BuildHomeLayoutItems(
+        IReadOnlyList<ShortcutLayoutEntry> layout,
+        IReadOnlyList<Workspace> workspaces,
+        List<TerminalShortcut> pinnedInOrder)
+    {
+        var pinnedWorkspaces = workspaces
+            .Where(workspace => workspace.IsPinned)
+            .OrderBy(workspace => workspace.PinOrder ?? int.MaxValue)
+            .ThenBy(workspace => workspace.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var pinnedShortcuts = layout
+            .Where(entry => entry.Kind == ShortcutLayoutEntryKind.Shortcut && entry.Shortcut?.IsPinned == true)
+            .Select(entry => entry.Shortcut!)
+            .OrderBy(shortcut => shortcut.PinOrder ?? int.MaxValue)
+            .ThenBy(shortcut => shortcut.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (pinnedShortcuts.Count > 0 || pinnedWorkspaces.Count > 0)
+        {
+            yield return new Separator(ShortcutLayoutDisplay.FavoritesSectionTitle);
+            foreach (var shortcut in pinnedShortcuts)
+            {
+                yield return BuildShortcutItem(shortcut, pinnedInOrder);
+            }
+
+            foreach (var workspace in pinnedWorkspaces)
+            {
+                var item = BuildWorkspaceItem(workspace);
+                item.Subtitle = WorkspaceDisplay.BuildFavoriteSubtitle(workspace);
+                yield return item;
+            }
+
+            yield return new Separator(ShortcutLayoutDisplay.ShortcutsSectionTitle);
+        }
+
+        foreach (var entry in layout)
+        {
+            switch (entry.Kind)
+            {
+                case ShortcutLayoutEntryKind.Separator:
+                    yield return new Separator(entry.SeparatorTitle ?? string.Empty);
+                    break;
+                case ShortcutLayoutEntryKind.Shortcut when entry.Shortcut is { IsPinned: false } shortcut:
+                    yield return BuildShortcutItem(shortcut, pinnedInOrder);
+                    break;
+            }
+        }
+
+        foreach (var item in WorkspaceLayoutDisplay.BuildListItems(
+                     workspaces,
+                     BuildWorkspaceItem))
+        {
+            yield return item;
+        }
+    }
+
+    private ListItem BuildWorkspaceItem(Workspace workspace)
+    {
+        return WorkspaceListItems.CreateOpen(workspace, _settings, Reload, _createShortcutCommand);
     }
 }

@@ -35,26 +35,43 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
         }
 
         var shortcuts = QuickShellRuntimeServices.Shortcuts.SearchForRootPalette(_lastQuery).ToArray();
-        if (shortcuts.Length == 0)
+        var workspaces = QuickShellRuntimeServices.Workspaces.SearchForRootPalette(_lastQuery).ToArray();
+        if (shortcuts.Length == 0 && workspaces.Length == 0)
         {
             ClearResult();
             return;
         }
 
         _listPage.UpdateSearchText(string.Empty, _lastQuery);
-        ApplyListResult(shortcuts);
+        ApplyListResult(shortcuts, workspaces);
     }
 
-    private void ApplyListResult(TerminalShortcut[] shortcuts)
+    private void ApplyListResult(TerminalShortcut[] shortcuts, Workspace[] workspaces)
     {
-        if (shortcuts.Length == 1)
+        if (shortcuts.Length == 1 && workspaces.Length == 0)
         {
             Title = shortcuts[0].Name;
             Subtitle = ShortcutDisplay.BuildDirectorySubtitle(shortcuts[0]);
         }
+        else if (workspaces.Length == 1 && shortcuts.Length == 0)
+        {
+            Title = workspaces[0].Name;
+            Subtitle = WorkspaceDisplay.BuildFavoriteSubtitle(workspaces[0]);
+        }
         else
         {
-            Title = $"{shortcuts.Length} shortcuts";
+            var parts = new List<string>();
+            if (shortcuts.Length > 0)
+            {
+                parts.Add($"{shortcuts.Length} shortcut{(shortcuts.Length == 1 ? string.Empty : "s")}");
+            }
+
+            if (workspaces.Length > 0)
+            {
+                parts.Add($"{workspaces.Length} workspace{(workspaces.Length == 1 ? string.Empty : "s")}");
+            }
+
+            Title = string.Join(" · ", parts);
             Subtitle = $"Matching \"{_lastQuery}\"";
         }
 

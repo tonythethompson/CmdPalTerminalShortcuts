@@ -30,6 +30,9 @@ internal sealed partial class ShortcutTransferSettingsForm : FormContent
         var result = action switch
         {
             "export" => RunExport(),
+            "exportWorkspaces" => RunWorkspaceExport(),
+            "importWorkspacesMerge" => RunWorkspaceImport(merge: true),
+            "importWorkspacesReplace" => RunWorkspaceImport(merge: false),
             "import" => new ImportShortcutsCommand(
                 _onReload ?? (() => { }),
                 stayOnSettings: true,
@@ -47,6 +50,23 @@ internal sealed partial class ShortcutTransferSettingsForm : FormContent
     {
         var result = new ExportShortcutsCommand(stayOnSettings: true).Invoke();
         RebuildTemplate();
+        return result;
+    }
+
+    private CommandResult RunWorkspaceExport()
+    {
+        var result = new ExportWorkspacesCommand(stayOnSettings: true).Invoke();
+        RebuildTemplate();
+        return result;
+    }
+
+    private CommandResult RunWorkspaceImport(bool merge)
+    {
+        var result = merge
+            ? new ImportWorkspacesMergeCommand(stayOnSettings: true).Invoke()
+            : new ImportWorkspacesReplaceCommand(stayOnSettings: true).Invoke();
+        RebuildTemplate();
+        _onReload?.Invoke();
         return result;
     }
 
@@ -94,6 +114,8 @@ internal sealed partial class ShortcutTransferSettingsForm : FormContent
         {
             SettingsCardJson.SectionHeader("Backup & transfer"),
             SettingsCardJson.SubtleText("Export your shortcuts or import a backup file."),
+            SettingsCardJson.SectionHeader("Workspaces"),
+            SettingsCardJson.SubtleText("Export or import workspace definitions separately from shortcuts."),
         };
 
         var conflictBlock = BuildImportConflictBlock();
@@ -124,6 +146,24 @@ internal sealed partial class ShortcutTransferSettingsForm : FormContent
                   "title": "Import",
                   "associatedInputs": "none",
                   "data": { "action": "import" }
+                },
+                {
+                  "type": "Action.Submit",
+                  "title": "Export workspaces",
+                  "associatedInputs": "none",
+                  "data": { "action": "exportWorkspaces" }
+                },
+                {
+                  "type": "Action.Submit",
+                  "title": "Import workspaces (merge)",
+                  "associatedInputs": "none",
+                  "data": { "action": "importWorkspacesMerge" }
+                },
+                {
+                  "type": "Action.Submit",
+                  "title": "Import workspaces (replace)",
+                  "associatedInputs": "none",
+                  "data": { "action": "importWorkspacesReplace" }
                 }
               ]
             """;

@@ -30,7 +30,8 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
         Settings = _settingsManager.Settings;
 
         _createShortcutCommand = new CreateShortcutCommand(ReloadPages);
-        _page = new QuickShellPage(_settingsManager, _createShortcutCommand);
+        var createWorkspaceCommand = new CreateWorkspaceCommand(ReloadPages);
+        _page = new QuickShellPage(_settingsManager, _createShortcutCommand, createWorkspaceCommand);
         _settingsChangedHandler = (_, _) => _page.Reload();
         _settingsManager.SettingsChanged += _settingsChangedHandler;
 
@@ -107,6 +108,54 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
                 Subtitle = "Directory and optional command",
                 Icon = new IconInfo("\uE710"),
             };
+        }
+
+        if (string.Equals(id, WorkspaceCommandIds.CreateWorkspace, StringComparison.Ordinal))
+        {
+            return new CommandItem(new CreateWorkspaceCommand(ReloadPages))
+            {
+                Title = "Create workspace",
+                Subtitle = "Multi-terminal project environment",
+                Icon = new IconInfo(WorkspaceListItems.WorkspaceIcon),
+            };
+        }
+
+        if (string.Equals(id, WorkspaceEditorPage.PageId, StringComparison.Ordinal))
+        {
+            return new CommandItem(new WorkspaceEditorPage())
+            {
+                Title = "Edit workspace",
+                Icon = new IconInfo(WorkspaceListItems.WorkspaceIcon),
+            };
+        }
+
+        if (string.Equals(id, ProjectShortcutPickerPage.PageId, StringComparison.Ordinal))
+        {
+            return new CommandItem(new ProjectShortcutPickerPage())
+            {
+                Title = "Choose project shortcut",
+                Icon = new IconInfo(WorkspaceListItems.WorkspaceIcon),
+            };
+        }
+
+        if (string.Equals(id, WorkspaceEntryFormPage.PageId, StringComparison.Ordinal))
+        {
+            return new CommandItem(new WorkspaceEntryFormPage())
+            {
+                Title = "Edit launch entry",
+                Icon = new IconInfo("\uE756"),
+            };
+        }
+
+        if (WorkspaceCommandIds.TryParseOpen(id, out var workspaceId))
+        {
+            var workspace = QuickShellRuntimeServices.Workspaces.GetById(workspaceId);
+            if (workspace is null)
+            {
+                return null;
+            }
+
+            return WorkspaceListItems.CreateOpen(workspace, _settingsManager, ReloadPages, _createShortcutCommand);
         }
 
         if (ShortcutCommandIds.TryParseOpen(id, out var openKey))

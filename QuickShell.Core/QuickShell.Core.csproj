@@ -16,6 +16,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="QuickShell" />
     <InternalsVisibleTo Include="QuickShell.Run" />
+    <InternalsVisibleTo Include="QuickShell.Core.Tests" />
   </ItemGroup>
 
   <ItemGroup>

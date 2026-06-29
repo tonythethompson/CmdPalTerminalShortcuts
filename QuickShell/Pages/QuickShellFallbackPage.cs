@@ -51,9 +51,21 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
     private void RefreshItems()
     {
         var shortcuts = QuickShellRuntimeServices.Shortcuts.SearchForRootPalette(_query).ToArray();
-        _items = shortcuts.Length == 0
-            ? []
-            : shortcuts.Select(BuildShortcutItem).Cast<IListItem>().ToArray();
+        var workspaces = QuickShellRuntimeServices.Workspaces
+            .SearchForRootPalette(_query)
+            .ToArray();
+
+        if (shortcuts.Length == 0 && workspaces.Length == 0)
+        {
+            _items = [];
+        }
+        else
+        {
+            var items = new List<IListItem>();
+            items.AddRange(shortcuts.Select(BuildShortcutItem));
+            items.AddRange(workspaces.Select(BuildWorkspaceItem));
+            _items = items.ToArray();
+        }
 
         RaiseItemsChanged();
     }
@@ -72,6 +84,13 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
         var moreCommands = new List<CommandContextItem>(ShortcutContextCommands.Build(shortcut, Reload, _settings, includeEdit: false));
 
         item.MoreCommands = moreCommands.ToArray();
+        return item;
+    }
+
+    private ListItem BuildWorkspaceItem(Workspace workspace)
+    {
+        var item = WorkspaceListItems.CreateOpen(workspace, _settings, Reload);
+        item.Subtitle = WorkspaceDisplay.BuildSearchSubtitle(workspace);
         return item;
     }
 }

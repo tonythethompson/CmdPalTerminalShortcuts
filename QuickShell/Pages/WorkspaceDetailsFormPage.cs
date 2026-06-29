@@ -148,9 +148,8 @@ internal sealed partial class WorkspaceDetailsForm : FormContent
     {
         ApplyDraftMetadataToWorkspace();
         var onSaved = _editorOnSaved ?? _onChanged;
-        var originalName = _editorOriginalName ?? _workspace.Name;
         WorkspaceNavigationState.SetPicker(onSaved, forCreate: false, changeDirectory: true);
-        WorkspaceNavigationState.SetEditor(_workspace, originalName, onSaved);
+        WorkspaceNavigationState.SetEditor(_workspace, _editorOriginalName, onSaved);
         return CommandResult.GoToPage(new GoToPageArgs
         {
             PageId = ProjectShortcutPickerPage.PageId,

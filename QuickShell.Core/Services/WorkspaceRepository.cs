@@ -273,17 +273,22 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
     public string ResolveAvailableName(string desiredName, string? replacingOriginalName = null) =>
         WithLock(() => ResolveAvailableNameLocked(desiredName, replacingOriginalName));
 
-    private string ResolveAvailableNameLocked(string desiredName, string? replacingOriginalName = null)
+    private string ResolveAvailableNameLocked(string desiredName, string? replacingOriginalName = null) =>
+        ResolveAvailableNameInList(desiredName, _workspaces, replacingOriginalName);
+
+    private static string ResolveAvailableNameInList(
+        string desiredName,
+        IReadOnlyList<Workspace> workspaces,
+        string? replacingOriginalName = null)
     {
         var baseName = string.IsNullOrWhiteSpace(desiredName) ? "Workspace" : desiredName.Trim();
-        EnsureLoaded();
         if (!string.IsNullOrWhiteSpace(replacingOriginalName)
             && baseName.Equals(replacingOriginalName, StringComparison.OrdinalIgnoreCase))
         {
             return baseName;
         }
 
-        if (_workspaces.All(workspace => !workspace.Name.Equals(baseName, StringComparison.OrdinalIgnoreCase)))
+        if (workspaces.All(workspace => !workspace.Name.Equals(baseName, StringComparison.OrdinalIgnoreCase)))
         {
             return baseName;
         }
@@ -291,7 +296,7 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
         for (var suffix = 2; suffix < 10_000; suffix++)
         {
             var candidate = $"{baseName} ({suffix})";
-            if (_workspaces.All(workspace => !workspace.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
+            if (workspaces.All(workspace => !workspace.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
             {
                 return candidate;
             }
@@ -471,7 +476,7 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
                     }
                     else
                     {
-                        candidate.Name = ResolveAvailableNameLocked(candidate.Name, null);
+                        candidate.Name = ResolveAvailableNameInList(candidate.Name, workspaces, null);
                         renamed++;
                     }
                 }
@@ -500,6 +505,18 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
                     Imported = 0,
                     Skipped = skipped > 0 ? skipped : read.Workspaces.Length,
                     Message = "No valid workspaces could be imported.",
+                };
+            }
+
+            if (workspaces.Count > WorkspaceValidation.MaxWorkspaceCount)
+            {
+                return new WorkspaceTransferResult
+                {
+                    Success = false,
+                    Imported = importedCount,
+                    Skipped = skipped,
+                    Renamed = renamed,
+                    Message = $"At most {WorkspaceValidation.MaxWorkspaceCount} workspaces are supported.",
                 };
             }
 

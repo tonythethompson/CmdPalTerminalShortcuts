@@ -119,34 +119,27 @@ internal sealed partial class WorkspaceEntryForm : FormContent
     {
         TerminalCatalog.InvalidateCache();
         TemplateJson = BuildTemplateJson(FormTerminalChoicesJson());
-        ApplyDraft();
+        PublishDraftJson();
         return QuickShellNavigation.StayOpen("Terminal list refreshed.");
     }
 
     private CommandResult HandleSave()
     {
-        _entry.Label = _draft.Label.Trim();
-        _entry.Command = string.IsNullOrWhiteSpace(_draft.Command) ? null : _draft.Command.Trim();
-        _entry.RunAsAdmin = _draft.RunAsAdmin;
-        _entry.IsEnabled = _draft.IsEnabled;
-
-        var launchShortcut = new TerminalShortcut();
-        TerminalCatalog.ApplyLaunchTargetId(launchShortcut, _draft.LaunchTarget);
-        _entry.Terminal = launchShortcut.Terminal;
-        _entry.WtProfile = launchShortcut.WtProfile;
-
-        if (!WorkspaceValidation.TryValidateEntry(_entry, out var error))
+        var candidate = BuildCandidateEntryFromDraft();
+        if (!WorkspaceValidation.TryValidateEntry(candidate, out var error))
         {
             return QuickShellNavigation.StayOpen(error);
         }
 
         var duplicateLabel = _workspace.Entries.Any(entry =>
-            !entry.Id.Equals(_entry.Id, StringComparison.OrdinalIgnoreCase)
-            && entry.Label.Equals(_entry.Label, StringComparison.OrdinalIgnoreCase));
+            !entry.Id.Equals(candidate.Id, StringComparison.OrdinalIgnoreCase)
+            && entry.Label.Equals(candidate.Label, StringComparison.OrdinalIgnoreCase));
         if (duplicateLabel)
         {
-            return QuickShellNavigation.StayOpen($"Duplicate launch label '{_entry.Label}'.");
+            return QuickShellNavigation.StayOpen($"Duplicate launch label '{candidate.Label}'.");
         }
+
+        ApplyCandidateToEntry(candidate);
 
         if (_isNewEntry
             && !_workspace.Entries.Any(entry => entry.Id.Equals(_entry.Id, StringComparison.OrdinalIgnoreCase)))
@@ -157,6 +150,33 @@ internal sealed partial class WorkspaceEntryForm : FormContent
         _onChanged(_workspace);
         _releaseForm?.Invoke();
         return QuickShellNavigation.GoBack($"Updated '{_entry.Label}'.");
+    }
+
+    private WorkspaceEntry BuildCandidateEntryFromDraft()
+    {
+        var launchShortcut = new TerminalShortcut();
+        TerminalCatalog.ApplyLaunchTargetId(launchShortcut, _draft.LaunchTarget);
+        return new WorkspaceEntry
+        {
+            Id = _entry.Id,
+            Label = _draft.Label.Trim(),
+            Command = string.IsNullOrWhiteSpace(_draft.Command) ? null : _draft.Command.Trim(),
+            Terminal = launchShortcut.Terminal,
+            WtProfile = launchShortcut.WtProfile,
+            RunAsAdmin = _draft.RunAsAdmin,
+            IsEnabled = _draft.IsEnabled,
+            Order = _entry.Order,
+        };
+    }
+
+    private void ApplyCandidateToEntry(WorkspaceEntry candidate)
+    {
+        _entry.Label = candidate.Label;
+        _entry.Command = candidate.Command;
+        _entry.Terminal = candidate.Terminal;
+        _entry.WtProfile = candidate.WtProfile;
+        _entry.RunAsAdmin = candidate.RunAsAdmin;
+        _entry.IsEnabled = candidate.IsEnabled;
     }
 
     private void CaptureInputs(string payload)
@@ -185,6 +205,11 @@ internal sealed partial class WorkspaceEntryForm : FormContent
             IsEnabled = _entry.IsEnabled,
         };
 
+        PublishDraftJson();
+    }
+
+    private void PublishDraftJson()
+    {
         DataJson = $$"""
         {
           "Label": "{{EscapeJsonValue(_draft.Label)}}",

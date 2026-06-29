@@ -6,7 +6,7 @@ using QuickShell.Services;
 
 namespace QuickShell.Pages;
 
-internal sealed partial class ProjectShortcutPickerPage : DynamicListPage
+internal sealed partial class ProjectShortcutPickerPage : DynamicListPage, IDisposable
 {
     public const string PageId = "com.quickshell.workspace.project-picker";
 
@@ -62,6 +62,8 @@ internal sealed partial class ProjectShortcutPickerPage : DynamicListPage
 
         RaiseItemsChanged();
     }
+
+    public void Dispose() => _searchDebouncer.Dispose();
 }
 
 internal sealed partial class SelectProjectShortcutCommand : InvokableCommand

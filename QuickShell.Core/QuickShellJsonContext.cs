@@ -20,4 +20,5 @@ namespace QuickShell;
 [JsonSerializable(typeof(List<WorkspaceWriteRecord>))]
 [JsonSerializable(typeof(WorkspaceEntry))]
 [JsonSerializable(typeof(List<WorkspaceEntry>))]
+[JsonSerializable(typeof(string))]
 internal sealed partial class QuickShellJsonContext : JsonSerializerContext;

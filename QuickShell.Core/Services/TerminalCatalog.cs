@@ -91,7 +91,7 @@ internal static class TerminalCatalog
         return ids;
     }
 
-    private static IReadOnlyList<string> GetConsoleHostProfileIds()
+    private static List<string> GetConsoleHostProfileIds()
     {
         EnsureCached();
         var ids = new List<string> { TerminalHostIds.DefaultProfile };

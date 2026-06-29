@@ -405,7 +405,7 @@ internal sealed partial class WorkspaceDetailsForm : FormContent
 
     private static string EscapeJsonValue(string? value)
     {
-        var encoded = JsonSerializer.Serialize(value ?? string.Empty);
+        var encoded = JsonSerializer.Serialize(value ?? string.Empty, QuickShellJsonContext.Default.String);
         return encoded.Length >= 2 ? encoded[1..^1] : string.Empty;
     }
 

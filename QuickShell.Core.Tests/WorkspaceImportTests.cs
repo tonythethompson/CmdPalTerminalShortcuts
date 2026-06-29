@@ -11,7 +11,7 @@ public sealed class WorkspaceImportTests
     {
         using var directory = new TempDataDirectory();
         var shortcuts = new FakeShortcutRepository([]);
-        using var repository = new WorkspaceRepository(shortcuts);
+        using var repository = CreateRepository(shortcuts, directory.Path);
 
         var importPath = Path.Combine(directory.Path, "empty.json");
         File.WriteAllText(importPath, "[]");
@@ -27,7 +27,7 @@ public sealed class WorkspaceImportTests
     {
         using var directory = new TempDataDirectory();
         var shortcuts = new FakeShortcutRepository([]);
-        using var repository = new WorkspaceRepository(shortcuts);
+        using var repository = CreateRepository(shortcuts, directory.Path);
 
         var importPath = Path.Combine(directory.Path, "duplicates.json");
         File.WriteAllText(importPath, BuildImportJson(
@@ -41,6 +41,7 @@ public sealed class WorkspaceImportTests
         Assert.Equal(1, result.Renamed);
 
         var names = repository.GetWorkspaces().Select(workspace => workspace.Name).OrderBy(name => name).ToList();
+        Assert.Equal(2, names.Count);
         Assert.Equal(["Shared Name", "Shared Name (2)"], names);
     }
 
@@ -49,7 +50,7 @@ public sealed class WorkspaceImportTests
     {
         using var directory = new TempDataDirectory();
         var shortcuts = new FakeShortcutRepository([]);
-        using var repository = new WorkspaceRepository(shortcuts);
+        using var repository = CreateRepository(shortcuts, directory.Path);
 
         var workspaces = Enumerable.Range(1, WorkspaceValidation.MaxWorkspaceCount + 1)
             .Select(index => ($"Workspace {index}", $@"C:\Projects\{index}"))
@@ -58,13 +59,16 @@ public sealed class WorkspaceImportTests
         var importPath = Path.Combine(directory.Path, "oversized.json");
         File.WriteAllText(importPath, BuildImportJson(workspaces));
 
-        var beforeCount = repository.GetWorkspaces().Count;
+        Assert.Empty(repository.GetWorkspaces());
         var result = repository.ImportReplace(importPath);
 
         Assert.False(result.Success);
         Assert.Contains("200", result.Message, StringComparison.Ordinal);
-        Assert.Equal(beforeCount, repository.GetWorkspaces().Count);
+        Assert.Empty(repository.GetWorkspaces());
     }
+
+    private static WorkspaceRepository CreateRepository(FakeShortcutRepository shortcuts, string configDirectory) =>
+        new(shortcuts, configDirectory);
 
     private static string BuildImportJson(params (string Name, string Directory)[] workspaces)
     {

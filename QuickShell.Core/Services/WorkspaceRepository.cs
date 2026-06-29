@@ -10,6 +10,7 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
     private const int MaxConfigBytes = 2 * 1024 * 1024;
 
     private readonly IShortcutRepository _shortcuts;
+    private readonly string? _configDirectoryOverride;
 
     private readonly SemaphoreSlim _sync = new(1, 1);
     private readonly Mutex _fileMutex = new(false, @"Global\QuickShell_workspaces_json");
@@ -23,12 +24,19 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
     private bool _disposed;
 
     public WorkspaceRepository(IShortcutRepository shortcuts)
+        : this(shortcuts, configDirectory: null)
     {
-        _shortcuts = shortcuts;
     }
 
-    private static string ConfigDirectory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickShell");
+    internal WorkspaceRepository(IShortcutRepository shortcuts, string? configDirectory)
+    {
+        _shortcuts = shortcuts;
+        _configDirectoryOverride = configDirectory;
+    }
+
+    private string ConfigDirectory =>
+        _configDirectoryOverride
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickShell");
 
     public string ConfigPath => Path.Combine(ConfigDirectory, "workspaces.json");
 

@@ -128,12 +128,21 @@ internal sealed partial class WorkspaceDetailsForm : FormContent
 
     private CommandResult HandleChooseShortcut()
     {
+        ApplyDraftMetadataToWorkspace();
         WorkspaceNavigationState.SetPicker(_onChanged, forCreate: false, changeDirectory: true);
         WorkspaceNavigationState.SetEditor(_workspace, _workspace.Name, _onChanged);
         return CommandResult.GoToPage(new GoToPageArgs
         {
             PageId = ProjectShortcutPickerPage.PageId,
         });
+    }
+
+    private void ApplyDraftMetadataToWorkspace()
+    {
+        _workspace.Name = _draft.Name.Trim();
+        _workspace.Abbreviation = string.IsNullOrWhiteSpace(_draft.Abbreviation)
+            ? null
+            : _draft.Abbreviation.Trim();
     }
 
     private CommandResult ApplyDirectorySelection(string directory)
@@ -249,19 +258,19 @@ internal sealed partial class WorkspaceDetailsForm : FormContent
                   "type": "Action.Submit",
                   "title": "Browse folder",
                   "data": { "action": "browse" },
-                  "associatedInputs": "none"
+                  "associatedInputs": "auto"
                 },
                 {
                   "type": "Action.Submit",
                   "title": "Paste path",
                   "data": { "action": "paste" },
-                  "associatedInputs": "none"
+                  "associatedInputs": "auto"
                 },
                 {
                   "type": "Action.Submit",
                   "title": "Choose from shortcut",
                   "data": { "action": "chooseShortcut" },
-                  "associatedInputs": "none"
+                  "associatedInputs": "auto"
                 }
               ]
             }

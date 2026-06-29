@@ -50,8 +50,7 @@ public sealed class WorkspaceMigrationTests
         Assert.Single(workspaces);
         Assert.Equal(@"C:\Projects\Trackdub", workspaces[0].Directory);
 
-        var repository = new WorkspaceRepository(shortcuts);
-        var jsonBytes = repository.SerializeWriteRecordsForTests(workspaces);
+        var jsonBytes = WorkspaceRepository.SerializeWriteRecordsForTests(workspaces);
         var json = Encoding.UTF8.GetString(jsonBytes);
 
         Assert.DoesNotContain("ProjectShortcutId", json, StringComparison.Ordinal);

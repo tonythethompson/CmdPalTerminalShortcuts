@@ -27,7 +27,7 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
         _shortcuts = shortcuts;
     }
 
-    public string ConfigDirectory =>
+    private static string ConfigDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickShell");
 
     public string ConfigPath => Path.Combine(ConfigDirectory, "workspaces.json");
@@ -399,7 +399,7 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
     public Task<WorkspaceTransferResult> ImportReplaceAsync(string path, CancellationToken cancellationToken = default) =>
         ImportCoreAsync(path, replace: true, cancellationToken);
 
-    internal byte[] SerializeWriteRecordsForTests(IReadOnlyList<Workspace> workspaces) =>
+    internal static byte[] SerializeWriteRecordsForTests(IReadOnlyList<Workspace> workspaces) =>
         SerializeWriteRecords(workspaces);
 
     internal static List<Workspace> LoadFromDiskRecordsForTests(

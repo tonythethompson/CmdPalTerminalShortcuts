@@ -9,7 +9,11 @@ namespace QuickShell.Pages;
 
 internal sealed partial class WorkspaceDetailsFormPage : ContentPage
 {
-    public WorkspaceDetailsFormPage(Workspace workspace, Action onChanged)
+    public WorkspaceDetailsFormPage(
+        Workspace workspace,
+        Action onChanged,
+        Action? editorOnSaved = null,
+        string? editorOriginalName = null)
     {
         Id = $"com.quickshell.workspace.details.{Guid.NewGuid():N}";
         Icon = new IconInfo("\uE70F");
@@ -17,12 +21,17 @@ internal sealed partial class WorkspaceDetailsFormPage : ContentPage
         Name = "Edit";
         _workspace = workspace;
         _onChanged = onChanged;
+        _editorOnSaved = editorOnSaved;
+        _editorOriginalName = editorOriginalName;
     }
 
     private readonly Workspace _workspace;
     private readonly Action _onChanged;
+    private readonly Action? _editorOnSaved;
+    private readonly string? _editorOriginalName;
 
-    public override IContent[] GetContent() => [_form ??= new WorkspaceDetailsForm(_workspace, _onChanged, () => _form = null)];
+    public override IContent[] GetContent() =>
+        [_form ??= new WorkspaceDetailsForm(_workspace, _onChanged, _editorOnSaved, _editorOriginalName, () => _form = null)];
 
     private WorkspaceDetailsForm? _form;
 }
@@ -31,13 +40,22 @@ internal sealed partial class WorkspaceDetailsForm : FormContent
 {
     private readonly Workspace _workspace;
     private readonly Action _onChanged;
+    private readonly Action? _editorOnSaved;
+    private readonly string? _editorOriginalName;
     private readonly Action? _releaseForm;
     private FormDraft _draft = new();
 
-    public WorkspaceDetailsForm(Workspace workspace, Action onChanged, Action? releaseForm = null)
+    public WorkspaceDetailsForm(
+        Workspace workspace,
+        Action onChanged,
+        Action? editorOnSaved = null,
+        string? editorOriginalName = null,
+        Action? releaseForm = null)
     {
         _workspace = workspace;
         _onChanged = onChanged;
+        _editorOnSaved = editorOnSaved;
+        _editorOriginalName = editorOriginalName;
         _releaseForm = releaseForm;
         TemplateJson = BuildTemplateJson();
         ApplyDraft();
@@ -129,8 +147,10 @@ internal sealed partial class WorkspaceDetailsForm : FormContent
     private CommandResult HandleChooseShortcut()
     {
         ApplyDraftMetadataToWorkspace();
-        WorkspaceNavigationState.SetPicker(_onChanged, forCreate: false, changeDirectory: true);
-        WorkspaceNavigationState.SetEditor(_workspace, _workspace.Name, _onChanged);
+        var onSaved = _editorOnSaved ?? _onChanged;
+        var originalName = _editorOriginalName ?? _workspace.Name;
+        WorkspaceNavigationState.SetPicker(onSaved, forCreate: false, changeDirectory: true);
+        WorkspaceNavigationState.SetEditor(_workspace, originalName, onSaved);
         return CommandResult.GoToPage(new GoToPageArgs
         {
             PageId = ProjectShortcutPickerPage.PageId,

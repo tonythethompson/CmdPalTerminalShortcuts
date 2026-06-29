@@ -469,11 +469,7 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
 
                 if (workspaces.Any(existing => existing.Name.Equals(candidate.Name, StringComparison.OrdinalIgnoreCase)))
                 {
-                    if (replace)
-                    {
-                        workspaces.RemoveAll(existing => existing.Name.Equals(candidate.Name, StringComparison.OrdinalIgnoreCase));
-                    }
-                    else
+                    if (!replace)
                     {
                         candidate.Name = ResolveAvailableNameInList(candidate.Name, workspaces, null);
                         renamed++;
@@ -484,6 +480,12 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
                 {
                     skipped++;
                     continue;
+                }
+
+                if (replace
+                    && workspaces.Any(existing => existing.Name.Equals(candidate.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    workspaces.RemoveAll(existing => existing.Name.Equals(candidate.Name, StringComparison.OrdinalIgnoreCase));
                 }
 
                 candidate.Id = Guid.NewGuid().ToString("N");

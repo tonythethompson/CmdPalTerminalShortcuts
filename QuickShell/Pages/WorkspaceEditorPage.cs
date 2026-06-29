@@ -45,7 +45,7 @@ internal sealed partial class WorkspaceEditorPage : DynamicListPage
         var folderHint = WorkspaceHealth.BuildListFolderHint(_workspace);
         var items = new List<IListItem>
         {
-            new ListItem(new WorkspaceDetailsFormPage(_workspace, RefreshItems))
+            new ListItem(new WorkspaceDetailsFormPage(_workspace, RefreshItems, _onSaved, _originalName))
             {
                 Title = _workspace.Name,
                 Subtitle = folderHint,

@@ -28,6 +28,13 @@ public sealed class WorkspacePathTests
     }
 
     [Fact]
+    public void TryNormalizeLexical_RejectsRawLinuxPaths()
+    {
+        Assert.False(WorkspacePath.TryNormalizeLexical("/home/me/project", out _, out var error));
+        Assert.Contains("Linux-style", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void TryNormalizeLexical_AcceptsRootedWindowsPath()
     {
         Assert.True(WorkspacePath.TryNormalizeLexical(@"C:\Projects\Foo", out var normalized, out _));

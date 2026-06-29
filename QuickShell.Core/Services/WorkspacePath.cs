@@ -24,16 +24,16 @@ internal static class WorkspacePath
             return true;
         }
 
-        if (WslPathResolver.TryParse(trimmed, out var wslLocation))
-        {
-            normalized = NormalizeWslLexical(trimmed, wslLocation);
-            return !string.IsNullOrWhiteSpace(normalized);
-        }
-
         if (trimmed.StartsWith('/') && !trimmed.StartsWith("//", StringComparison.Ordinal))
         {
             error = "Linux-style paths must use a \\\\wsl$\\distro\\... UNC path for workspace storage.";
             return false;
+        }
+
+        if (WslPathResolver.TryParse(trimmed, out var wslLocation))
+        {
+            normalized = NormalizeWslLexical(trimmed, wslLocation);
+            return !string.IsNullOrWhiteSpace(normalized);
         }
 
         if (!Path.IsPathRooted(trimmed))

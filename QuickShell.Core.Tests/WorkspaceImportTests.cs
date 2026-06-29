@@ -67,6 +67,30 @@ public sealed class WorkspaceImportTests
         Assert.Empty(repository.GetWorkspaces());
     }
 
+    [Fact]
+    public void ImportReplace_DuplicateNameLaterInvalid_KeepsEarlierValidWorkspace()
+    {
+        using var directory = new TempDataDirectory();
+        var shortcuts = new FakeShortcutRepository([]);
+        using var repository = CreateRepository(shortcuts, directory.Path);
+
+        var importPath = Path.Combine(directory.Path, "duplicate-invalid.json");
+        File.WriteAllText(importPath, BuildImportJson(
+            ("Alpha", @"C:\Projects\Alpha"),
+            ("Alpha", "relative\\path")));
+
+        var result = repository.ImportReplace(importPath);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, result.Imported);
+        Assert.Equal(1, result.Skipped);
+
+        var workspaces = repository.GetWorkspaces();
+        Assert.Single(workspaces);
+        Assert.Equal("Alpha", workspaces[0].Name);
+        Assert.Equal(@"C:\Projects\Alpha", workspaces[0].Directory);
+    }
+
     private static WorkspaceRepository CreateRepository(FakeShortcutRepository shortcuts, string configDirectory) =>
         new(shortcuts, configDirectory);
 

@@ -13,16 +13,18 @@ internal sealed partial class WorkspaceEntryFormPage : ContentPage
 
     public WorkspaceEntryFormPage()
     {
-        if (!WorkspaceNavigationState.TryTakeEntryForm(out var workspace, out var entry, out var onChanged))
+        if (!WorkspaceNavigationState.TryTakeEntryForm(out var workspace, out var entry, out var onChanged, out var isNew))
         {
             workspace = new Workspace();
             entry = new WorkspaceEntry();
             onChanged = static _ => { };
+            isNew = false;
         }
 
         _workspace = workspace;
         _entry = entry;
         _onChanged = onChanged;
+        _isNewEntry = isNew;
         Id = PageId;
         Icon = new IconInfo("\uE756");
         Title = $"Edit {entry.Label}";
@@ -34,6 +36,7 @@ internal sealed partial class WorkspaceEntryFormPage : ContentPage
         _workspace = workspace;
         _entry = entry;
         _onChanged = onChanged;
+        _isNewEntry = false;
         Id = PageId;
         Icon = new IconInfo("\uE756");
         Title = $"Edit {entry.Label}";
@@ -43,9 +46,10 @@ internal sealed partial class WorkspaceEntryFormPage : ContentPage
     private readonly Workspace _workspace;
     private readonly WorkspaceEntry _entry;
     private readonly Action<Workspace> _onChanged;
+    private readonly bool _isNewEntry;
 
     public override IContent[] GetContent() =>
-        [_form ??= new WorkspaceEntryForm(_workspace, _entry, _onChanged, () => _form = null)];
+        [_form ??= new WorkspaceEntryForm(_workspace, _entry, _onChanged, _isNewEntry, () => _form = null)];
 
     private WorkspaceEntryForm? _form;
 }
@@ -55,6 +59,7 @@ internal sealed partial class WorkspaceEntryForm : FormContent
     private readonly Workspace _workspace;
     private readonly WorkspaceEntry _entry;
     private readonly Action<Workspace> _onChanged;
+    private readonly bool _isNewEntry;
     private readonly Action? _releaseForm;
     private FormDraft _draft = new();
 
@@ -62,11 +67,13 @@ internal sealed partial class WorkspaceEntryForm : FormContent
         Workspace workspace,
         WorkspaceEntry entry,
         Action<Workspace> onChanged,
+        bool isNewEntry = false,
         Action? releaseForm = null)
     {
         _workspace = workspace;
         _entry = entry;
         _onChanged = onChanged;
+        _isNewEntry = isNewEntry;
         _releaseForm = releaseForm;
         TemplateJson = BuildTemplateJson(FormTerminalChoicesJson());
         ApplyDraft();
@@ -139,6 +146,12 @@ internal sealed partial class WorkspaceEntryForm : FormContent
         if (duplicateLabel)
         {
             return QuickShellNavigation.StayOpen($"Duplicate launch label '{_entry.Label}'.");
+        }
+
+        if (_isNewEntry
+            && !_workspace.Entries.Any(entry => entry.Id.Equals(_entry.Id, StringComparison.OrdinalIgnoreCase)))
+        {
+            _workspace.Entries.Add(_entry);
         }
 
         _onChanged(_workspace);

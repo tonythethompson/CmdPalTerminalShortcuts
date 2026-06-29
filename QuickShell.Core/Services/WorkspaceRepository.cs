@@ -441,6 +441,15 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
             };
         }
 
+        if (read.Workspaces.Length == 0)
+        {
+            return new WorkspaceTransferResult
+            {
+                Success = false,
+                Message = "No workspaces found in import file.",
+            };
+        }
+
         return WithLock(() =>
         {
             EnsureLoaded();
@@ -453,11 +462,6 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
             foreach (var workspace in read.Workspaces)
             {
                 var candidate = WorkspaceMapper.CloneWorkspace(workspace);
-                if (!WorkspaceValidation.TryValidateForImport(candidate, _shortcuts, workspaces, out _))
-                {
-                    skipped++;
-                    continue;
-                }
 
                 if (workspaces.Any(existing => existing.Name.Equals(candidate.Name, StringComparison.OrdinalIgnoreCase)))
                 {
@@ -472,6 +476,12 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
                     }
                 }
 
+                if (!WorkspaceValidation.TryValidateForImport(candidate, _shortcuts, workspaces, out _))
+                {
+                    skipped++;
+                    continue;
+                }
+
                 candidate.Id = Guid.NewGuid().ToString("N");
                 foreach (var entry in candidate.Entries)
                 {
@@ -482,9 +492,15 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
                 importedCount++;
             }
 
-            if (importedCount == 0 && read.Workspaces.Length > 0)
+            if (importedCount == 0)
             {
-                skipped = read.Workspaces.Length;
+                return new WorkspaceTransferResult
+                {
+                    Success = false,
+                    Imported = 0,
+                    Skipped = skipped > 0 ? skipped : read.Workspaces.Length,
+                    Message = "No valid workspaces could be imported.",
+                };
             }
 
             SaveWorkspacesLocked(workspaces);

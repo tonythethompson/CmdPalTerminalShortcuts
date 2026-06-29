@@ -63,29 +63,43 @@ internal static class WorkspaceNavigationState
     private static WorkspaceEntry? _entryFormEntry;
     private static Action<Workspace>? _entryFormOnChanged;
 
-    public static void SetEntryForm(Workspace workspace, WorkspaceEntry entry, Action<Workspace> onChanged)
+    private static bool _entryFormIsNew;
+
+    public static void SetEntryForm(
+        Workspace workspace,
+        WorkspaceEntry entry,
+        Action<Workspace> onChanged,
+        bool isNew = false)
     {
         _entryFormWorkspace = workspace;
         _entryFormEntry = entry;
         _entryFormOnChanged = onChanged;
+        _entryFormIsNew = isNew;
     }
 
-    public static bool TryTakeEntryForm(out Workspace workspace, out WorkspaceEntry entry, out Action<Workspace> onChanged)
+    public static bool TryTakeEntryForm(
+        out Workspace workspace,
+        out WorkspaceEntry entry,
+        out Action<Workspace> onChanged,
+        out bool isNew)
     {
         if (_entryFormWorkspace is null || _entryFormEntry is null || _entryFormOnChanged is null)
         {
             workspace = new Workspace();
             entry = new WorkspaceEntry();
             onChanged = static _ => { };
+            isNew = false;
             return false;
         }
 
         workspace = _entryFormWorkspace;
         entry = _entryFormEntry;
         onChanged = _entryFormOnChanged;
+        isNew = _entryFormIsNew;
         _entryFormWorkspace = null;
         _entryFormEntry = null;
         _entryFormOnChanged = null;
+        _entryFormIsNew = false;
         return true;
     }
 }

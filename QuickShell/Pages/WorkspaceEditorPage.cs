@@ -138,9 +138,7 @@ internal sealed partial class AddWorkspaceEntryCommand : InvokableCommand
     {
         var nextOrder = _workspace.Entries.Count == 0 ? 0 : _workspace.Entries.Max(entry => entry.Order) + 1;
         var entry = WorkspaceEditorState.CreateEntry("New launch", null, nextOrder);
-        _workspace.Entries.Add(entry);
-        _onChanged(_workspace);
-        WorkspaceNavigationState.SetEntryForm(_workspace, entry, _onChanged);
+        WorkspaceNavigationState.SetEntryForm(_workspace, entry, _onChanged, isNew: true);
         return CommandResult.GoToPage(new GoToPageArgs
         {
             PageId = WorkspaceEntryFormPage.PageId,

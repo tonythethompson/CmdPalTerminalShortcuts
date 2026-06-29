@@ -55,8 +55,6 @@ internal static class WorkspaceContextCommands
             RequestedShortcut = KeyChordHelpers.FromModifiers(ctrl: true, alt: false, shift: false, win: false, vkey: VirtualKey.F),
         });
 
-        items.AddRange(ShortcutContextCommands.BuildUndoRedoCommands(onChanged));
-
         if (createShortcutCommand is not null)
         {
             items.Add(new CommandContextItem(createShortcutCommand)

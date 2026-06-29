@@ -20,7 +20,6 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
     private DateTime _lastWriteTimeUtc = DateTime.MinValue;
     private bool _configEnsured;
     private bool _persistPending;
-    private System.Threading.Timer? _persistTimer;
     private bool _disposed;
 
     public WorkspaceRepository(IShortcutRepository shortcuts)
@@ -430,14 +429,6 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
 
         _disposed = true;
         FlushPendingWrites();
-        if (_persistTimer is not null)
-        {
-            using var timerDisposed = new ManualResetEvent(false);
-            _persistTimer.Dispose(timerDisposed);
-            timerDisposed.WaitOne(TimeSpan.FromSeconds(5));
-            _persistTimer = null;
-        }
-
         _fileMutex.Dispose();
         _sync.Dispose();
     }
@@ -656,21 +647,11 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
 
         _workspaces = CloneAll(workspaces);
         _lastGoodWorkspaces = CloneAll(workspaces);
-        SchedulePersistLocked();
-    }
-
-    private void SchedulePersistLocked()
-    {
         _persistPending = true;
-        _persistTimer ??= new System.Threading.Timer(_ => WithLock(FlushPendingPersistLocked), null, Timeout.Infinite, Timeout.Infinite);
-        _persistTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        FlushPendingPersistLocked();
     }
 
-    private void CancelPendingPersist()
-    {
-        _persistPending = false;
-        _persistTimer?.Change(Timeout.Infinite, Timeout.Infinite);
-    }
+    private void CancelPendingPersist() => _persistPending = false;
 
     private void FlushPendingPersistLocked()
     {

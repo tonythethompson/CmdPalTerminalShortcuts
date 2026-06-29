@@ -128,7 +128,7 @@ internal static class WorkspaceValidation
             return false;
         }
 
-        if (!TryValidateAbbreviationForSave(workspace, shortcuts, workspaces, out error))
+        if (!TryValidateAbbreviationForSave(workspace, shortcuts, workspaces.GetWorkspaces(), originalName, out error))
         {
             return false;
         }
@@ -153,7 +153,7 @@ internal static class WorkspaceValidation
     public static bool TryValidateForImport(
         Workspace workspace,
         IShortcutRepository shortcuts,
-        IWorkspaceRepository workspaces,
+        IReadOnlyList<Workspace> existingWorkspaces,
         out string error)
     {
         if (!TryValidateStructural(workspace, out error))
@@ -161,7 +161,7 @@ internal static class WorkspaceValidation
             return false;
         }
 
-        if (!TryValidateAbbreviationForSave(workspace, shortcuts, workspaces, out error))
+        if (!TryValidateAbbreviationForSave(workspace, shortcuts, existingWorkspaces, replacingOriginalName: null, out error))
         {
             return false;
         }
@@ -244,7 +244,8 @@ internal static class WorkspaceValidation
         string abbreviation,
         string workspaceName,
         IShortcutRepository shortcuts,
-        IWorkspaceRepository workspaces,
+        IReadOnlyList<Workspace> existingWorkspaces,
+        string? replacingOriginalName,
         out string error)
     {
         if (string.IsNullOrWhiteSpace(abbreviation))
@@ -262,8 +263,8 @@ internal static class WorkspaceValidation
             return false;
         }
 
-        var workspaceConflict = workspaces.GetWorkspaces()
-            .FirstOrDefault(workspace => !workspace.Name.Equals(workspaceName, StringComparison.OrdinalIgnoreCase)
+        var workspaceConflict = existingWorkspaces
+            .FirstOrDefault(workspace => !IsSameWorkspace(workspace, workspaceName, replacingOriginalName)
                 && !string.IsNullOrWhiteSpace(workspace.Abbreviation)
                 && workspace.Abbreviation.Equals(abbreviation, StringComparison.OrdinalIgnoreCase));
         if (workspaceConflict is not null)
@@ -275,6 +276,11 @@ internal static class WorkspaceValidation
         error = string.Empty;
         return true;
     }
+
+    private static bool IsSameWorkspace(Workspace workspace, string workspaceName, string? replacingOriginalName) =>
+        workspace.Name.Equals(workspaceName, StringComparison.OrdinalIgnoreCase)
+        || (!string.IsNullOrWhiteSpace(replacingOriginalName)
+            && workspace.Name.Equals(replacingOriginalName, StringComparison.OrdinalIgnoreCase));
 
     private static bool TryValidateStructural(Workspace workspace, out string error)
     {
@@ -333,7 +339,8 @@ internal static class WorkspaceValidation
     private static bool TryValidateAbbreviationForSave(
         Workspace workspace,
         IShortcutRepository shortcuts,
-        IWorkspaceRepository workspaces,
+        IReadOnlyList<Workspace> existingWorkspaces,
+        string? replacingOriginalName,
         out string error)
     {
         if (!string.IsNullOrWhiteSpace(workspace.Abbreviation)
@@ -347,7 +354,8 @@ internal static class WorkspaceValidation
             workspace.Abbreviation ?? string.Empty,
             workspace.Name,
             shortcuts,
-            workspaces,
+            existingWorkspaces,
+            replacingOriginalName,
             out error);
     }
 

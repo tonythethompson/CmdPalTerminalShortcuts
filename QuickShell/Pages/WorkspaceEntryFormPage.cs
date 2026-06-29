@@ -2,18 +2,39 @@ using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Models;
 using QuickShell.Services;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace QuickShell.Pages;
 
 internal sealed partial class WorkspaceEntryFormPage : ContentPage
 {
+    public const string PageId = "com.quickshell.workspace.entry-form";
+
+    public WorkspaceEntryFormPage()
+    {
+        if (!WorkspaceNavigationState.TryTakeEntryForm(out var workspace, out var entry, out var onChanged))
+        {
+            workspace = new Workspace();
+            entry = new WorkspaceEntry();
+            onChanged = static _ => { };
+        }
+
+        _workspace = workspace;
+        _entry = entry;
+        _onChanged = onChanged;
+        Id = PageId;
+        Icon = new IconInfo("\uE756");
+        Title = $"Edit {entry.Label}";
+        Name = "Edit";
+    }
+
     public WorkspaceEntryFormPage(Workspace workspace, WorkspaceEntry entry, Action<Workspace> onChanged)
     {
         _workspace = workspace;
         _entry = entry;
         _onChanged = onChanged;
-        Id = $"com.quickshell.workspace.entry-form.{Guid.NewGuid():N}";
+        Id = PageId;
         Icon = new IconInfo("\uE756");
         Title = $"Edit {entry.Label}";
         Name = "Edit";
@@ -153,9 +174,9 @@ internal sealed partial class WorkspaceEntryForm : FormContent
 
         DataJson = $$"""
         {
-          "Label": "{{Escape(_draft.Label)}}",
-          "Command": "{{Escape(_draft.Command)}}",
-          "LaunchTarget": "{{Escape(_draft.LaunchTarget)}}",
+          "Label": "{{EscapeJsonValue(_draft.Label)}}",
+          "Command": "{{EscapeJsonValue(_draft.Command)}}",
+          "LaunchTarget": "{{EscapeJsonValue(_draft.LaunchTarget)}}",
           "RunAsAdmin": "{{(_draft.RunAsAdmin ? "true" : "false")}}",
           "IsEnabled": "{{(_draft.IsEnabled ? "true" : "false")}}"
         }
@@ -272,7 +293,11 @@ internal sealed partial class WorkspaceEntryForm : FormContent
         }
     }
 
-    private static string Escape(string? value) => (value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+    private static string EscapeJsonValue(string? value)
+    {
+        var encoded = JsonSerializer.Serialize(value ?? string.Empty);
+        return encoded.Length >= 2 ? encoded[1..^1] : string.Empty;
+    }
 
     private static bool ParseToggleBool(string? value, bool fallback) =>
         value switch

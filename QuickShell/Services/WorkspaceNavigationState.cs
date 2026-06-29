@@ -58,4 +58,34 @@ internal static class WorkspaceNavigationState
         forCreate = _pickerForCreate;
         changeDirectory = _pickerChangeDirectory;
     }
+
+    private static Workspace? _entryFormWorkspace;
+    private static WorkspaceEntry? _entryFormEntry;
+    private static Action<Workspace>? _entryFormOnChanged;
+
+    public static void SetEntryForm(Workspace workspace, WorkspaceEntry entry, Action<Workspace> onChanged)
+    {
+        _entryFormWorkspace = workspace;
+        _entryFormEntry = entry;
+        _entryFormOnChanged = onChanged;
+    }
+
+    public static bool TryTakeEntryForm(out Workspace workspace, out WorkspaceEntry entry, out Action<Workspace> onChanged)
+    {
+        if (_entryFormWorkspace is null || _entryFormEntry is null || _entryFormOnChanged is null)
+        {
+            workspace = new Workspace();
+            entry = new WorkspaceEntry();
+            onChanged = static _ => { };
+            return false;
+        }
+
+        workspace = _entryFormWorkspace;
+        entry = _entryFormEntry;
+        onChanged = _entryFormOnChanged;
+        _entryFormWorkspace = null;
+        _entryFormEntry = null;
+        _entryFormOnChanged = null;
+        return true;
+    }
 }

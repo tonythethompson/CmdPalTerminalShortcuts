@@ -138,6 +138,15 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
             };
         }
 
+        if (string.Equals(id, WorkspaceEntryFormPage.PageId, StringComparison.Ordinal))
+        {
+            return new CommandItem(new WorkspaceEntryFormPage())
+            {
+                Title = "Edit launch entry",
+                Icon = new IconInfo("\uE756"),
+            };
+        }
+
         if (WorkspaceCommandIds.TryParseOpen(id, out var workspaceId))
         {
             var workspace = QuickShellRuntimeServices.Workspaces.GetById(workspaceId);

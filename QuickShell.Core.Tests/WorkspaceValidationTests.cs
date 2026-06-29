@@ -98,11 +98,26 @@ public sealed class WorkspaceValidationTests
     public void TryValidateForImport_AcceptsRepairableEmptyDirectory()
     {
         var shortcuts = new FakeShortcutRepository([]);
-        var workspaces = new InMemoryWorkspaceRepository();
         var workspace = CreateRuntimeWorkspace(directory: string.Empty);
 
-        Assert.True(WorkspaceValidation.TryValidateForImport(workspace, shortcuts, workspaces, out var error));
+        Assert.True(WorkspaceValidation.TryValidateForImport(workspace, shortcuts, [], out var error));
         Assert.Equal(string.Empty, error);
+    }
+
+    [Fact]
+    public void TryValidateForSave_RenameKeepsUnchangedAbbreviation()
+    {
+        var shortcuts = new FakeShortcutRepository([]);
+        var tempDirectory = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var existing = CreateRuntimeWorkspace(directory: tempDirectory);
+        existing.Abbreviation = "agents";
+        var renamed = WorkspaceMapper.CloneWorkspace(existing);
+        renamed.Name = "Agents Renamed";
+        var repo = new InMemoryWorkspaceRepository(existing);
+
+        Assert.True(
+            WorkspaceValidation.TryValidateForSave(renamed, shortcuts, repo, existing.Name, out var error),
+            error);
     }
 
     private static WorkspaceDiskRecord CreateDiskRecord(string? directory = @"C:\Projects\Foo", string? projectShortcutId = null) =>
@@ -145,11 +160,17 @@ public sealed class WorkspaceValidationTests
 
     private sealed class InMemoryWorkspaceRepository : IWorkspaceRepository
     {
+        private readonly List<Workspace> _workspaces;
+
+        public InMemoryWorkspaceRepository(params Workspace[] workspaces) =>
+            _workspaces = workspaces.ToList();
+
         public string ConfigPath => string.Empty;
 
-        public IReadOnlyList<Workspace> GetWorkspaces() => [];
+        public IReadOnlyList<Workspace> GetWorkspaces() => _workspaces;
 
-        public Workspace? GetByName(string name) => null;
+        public Workspace? GetByName(string name) =>
+            _workspaces.FirstOrDefault(workspace => workspace.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
         public Workspace? GetById(string id) => null;
 

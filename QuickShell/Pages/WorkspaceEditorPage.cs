@@ -140,9 +140,10 @@ internal sealed partial class AddWorkspaceEntryCommand : InvokableCommand
         var entry = WorkspaceEditorState.CreateEntry("New launch", null, nextOrder);
         _workspace.Entries.Add(entry);
         _onChanged(_workspace);
+        WorkspaceNavigationState.SetEntryForm(_workspace, entry, _onChanged);
         return CommandResult.GoToPage(new GoToPageArgs
         {
-            PageId = new WorkspaceEntryFormPage(_workspace, entry, _onChanged).Id,
+            PageId = WorkspaceEntryFormPage.PageId,
         });
     }
 }

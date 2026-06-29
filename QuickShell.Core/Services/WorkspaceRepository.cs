@@ -202,7 +202,7 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
                 return null;
             }
 
-            var duplicateName = ResolveAvailableName($"{source.Name} copy", null);
+            var duplicateName = ResolveAvailableNameLocked($"{source.Name} copy", null);
             var duplicate = WorkspaceMapper.CloneWorkspace(source);
             duplicate.Id = Guid.NewGuid().ToString("N");
             duplicate.Name = duplicateName;
@@ -270,34 +270,34 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
         });
     }
 
-    public string ResolveAvailableName(string desiredName, string? replacingOriginalName = null)
+    public string ResolveAvailableName(string desiredName, string? replacingOriginalName = null) =>
+        WithLock(() => ResolveAvailableNameLocked(desiredName, replacingOriginalName));
+
+    private string ResolveAvailableNameLocked(string desiredName, string? replacingOriginalName = null)
     {
         var baseName = string.IsNullOrWhiteSpace(desiredName) ? "Workspace" : desiredName.Trim();
-        return WithLock(() =>
+        EnsureLoaded();
+        if (!string.IsNullOrWhiteSpace(replacingOriginalName)
+            && baseName.Equals(replacingOriginalName, StringComparison.OrdinalIgnoreCase))
         {
-            EnsureLoaded();
-            if (!string.IsNullOrWhiteSpace(replacingOriginalName)
-                && baseName.Equals(replacingOriginalName, StringComparison.OrdinalIgnoreCase))
-            {
-                return baseName;
-            }
+            return baseName;
+        }
 
-            if (_workspaces.All(workspace => !workspace.Name.Equals(baseName, StringComparison.OrdinalIgnoreCase)))
-            {
-                return baseName;
-            }
+        if (_workspaces.All(workspace => !workspace.Name.Equals(baseName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return baseName;
+        }
 
-            for (var suffix = 2; suffix < 10_000; suffix++)
+        for (var suffix = 2; suffix < 10_000; suffix++)
+        {
+            var candidate = $"{baseName} ({suffix})";
+            if (_workspaces.All(workspace => !workspace.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
             {
-                var candidate = $"{baseName} ({suffix})";
-                if (_workspaces.All(workspace => !workspace.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
-                {
-                    return candidate;
-                }
+                return candidate;
             }
+        }
 
-            return $"{baseName} ({Guid.NewGuid():N})";
-        });
+        return $"{baseName} ({Guid.NewGuid():N})";
     }
 
     public bool TryExportToFile(string path, out string error)
@@ -417,7 +417,14 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
 
         _disposed = true;
         FlushPendingWrites();
-        _persistTimer?.Dispose();
+        if (_persistTimer is not null)
+        {
+            using var timerDisposed = new ManualResetEvent(false);
+            _persistTimer.Dispose(timerDisposed);
+            timerDisposed.WaitOne(TimeSpan.FromSeconds(5));
+            _persistTimer = null;
+        }
+
         _fileMutex.Dispose();
         _sync.Dispose();
     }
@@ -445,32 +452,33 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
 
             foreach (var workspace in read.Workspaces)
             {
-                if (!WorkspaceValidation.TryValidateForImport(workspace, _shortcuts, this, out _))
+                var candidate = WorkspaceMapper.CloneWorkspace(workspace);
+                if (!WorkspaceValidation.TryValidateForImport(candidate, _shortcuts, workspaces, out _))
                 {
                     skipped++;
                     continue;
                 }
 
-                if (workspaces.Any(existing => existing.Name.Equals(workspace.Name, StringComparison.OrdinalIgnoreCase)))
+                if (workspaces.Any(existing => existing.Name.Equals(candidate.Name, StringComparison.OrdinalIgnoreCase)))
                 {
                     if (replace)
                     {
-                        workspaces.RemoveAll(existing => existing.Name.Equals(workspace.Name, StringComparison.OrdinalIgnoreCase));
+                        workspaces.RemoveAll(existing => existing.Name.Equals(candidate.Name, StringComparison.OrdinalIgnoreCase));
                     }
                     else
                     {
-                        workspace.Name = ResolveAvailableName(workspace.Name, null);
+                        candidate.Name = ResolveAvailableNameLocked(candidate.Name, null);
                         renamed++;
                     }
                 }
 
-                workspace.Id = Guid.NewGuid().ToString("N");
-                foreach (var entry in workspace.Entries)
+                candidate.Id = Guid.NewGuid().ToString("N");
+                foreach (var entry in candidate.Entries)
                 {
                     entry.Id = Guid.NewGuid().ToString("N");
                 }
 
-                workspaces.Add(workspace);
+                workspaces.Add(candidate);
                 importedCount++;
             }
 
@@ -511,6 +519,15 @@ internal sealed partial class WorkspaceRepository : IWorkspaceRepository, IDispo
             _workspaces = [];
             _lastGoodWorkspaces = [];
             _lastWriteTimeUtc = DateTime.UtcNow;
+            _configEnsured = true;
+            return;
+        }
+
+        var fileInfo = new FileInfo(ConfigPath);
+        if (fileInfo.Length > MaxConfigBytes)
+        {
+            _workspaces = CloneAll(_lastGoodWorkspaces);
+            _lastWriteTimeUtc = File.GetLastWriteTimeUtc(ConfigPath);
             _configEnsured = true;
             return;
         }

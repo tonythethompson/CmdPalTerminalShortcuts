@@ -179,13 +179,6 @@ internal sealed partial class QuickShellPage : DynamicListPage, IDisposable
 
         item.MoreCommands = moreCommands.ToArray();
 
-        var workspaceCommands = WorkspaceContextCommands.BuildForShortcut(shortcut, Reload, _settings);
-        if (workspaceCommands.Length > 0)
-        {
-            moreCommands.AddRange(workspaceCommands);
-            item.MoreCommands = moreCommands.ToArray();
-        }
-
         return item;
     }
 

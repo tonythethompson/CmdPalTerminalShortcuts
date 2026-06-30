@@ -1,4 +1,4 @@
-# Quick Shell
+# Quick Shell for CmdPal
 
 **Open your favorite project folders from [PowerToys Command Palette](https://learn.microsoft.com/windows/powertoys/command-palette/overview) — in one search.**
 

@@ -29,7 +29,7 @@ internal static class WorkspaceContextCommands
                 items.Add(new CommandContextItem(new OpenWorkspaceEntryCommand(workspace, entry, settings))
                 {
                     Title = $"Open {entry.Label}",
-                    Icon = new IconInfo("\uE756"),
+                    Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(entry)),
                 });
             }
         }

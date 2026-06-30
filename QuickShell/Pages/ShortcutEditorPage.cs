@@ -125,7 +125,7 @@ internal sealed partial class ShortcutEditorPage : DynamicListPage
             {
                 Title = launch.Label,
                 Subtitle = WorkspaceDisplay.BuildEntrySubtitle(launch),
-                Icon = new IconInfo(launch.IsEnabled ? "\uE756" : "\uE7BA"),
+                Icon = new IconInfo(launch.IsEnabled ? TerminalLaunchGlyphs.GetForLaunch(launch) : "\uE7BA"),
                 MoreCommands = moreCommands.ToArray(),
             });
         }

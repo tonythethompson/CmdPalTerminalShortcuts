@@ -55,7 +55,7 @@ internal sealed partial class ProjectShortcutPickerPage : DynamicListPage, IDisp
             {
                 Title = shortcut.Name,
                 Subtitle = ShortcutDisplay.BuildDirectorySubtitle(shortcut),
-                Icon = new IconInfo("\uE756"),
+                Icon = new IconInfo(ShortcutHealth.GetListGlyph(shortcut)),
             })
             .Cast<IListItem>()
             .ToArray();

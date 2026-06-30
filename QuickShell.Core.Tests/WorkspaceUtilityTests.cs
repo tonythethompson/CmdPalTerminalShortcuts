@@ -382,3 +382,30 @@ public sealed class ShortcutHealthTests : IDisposable
         }
     }
 }
+
+public sealed class TerminalLaunchGlyphsTests
+{
+    [Fact]
+    public void GetForLaunch_UsesPowerShellGlyphForPwsh()
+    {
+        var launch = new WorkspaceEntry { Terminal = "pwsh", IsEnabled = true };
+
+        Assert.Equal(ShortcutGlyphs.PowerShell, TerminalLaunchGlyphs.GetForLaunch(launch));
+    }
+
+    [Fact]
+    public void GetForLaunch_UsesLinuxGlyphForUbuntuProfile()
+    {
+        var launch = new WorkspaceEntry { Terminal = "wt", WtProfile = "Ubuntu", IsEnabled = true };
+
+        Assert.Equal(ShortcutGlyphs.Linux, TerminalLaunchGlyphs.GetForLaunch(launch));
+    }
+
+    [Fact]
+    public void GetForLaunch_UsesNewWindowForDefaultTerminal()
+    {
+        var launch = new WorkspaceEntry { Terminal = "default", IsEnabled = true };
+
+        Assert.Equal(ShortcutGlyphs.NewWindow, TerminalLaunchGlyphs.GetForLaunch(launch));
+    }
+}

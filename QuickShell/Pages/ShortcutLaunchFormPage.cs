@@ -35,7 +35,7 @@ internal sealed partial class ShortcutLaunchFormPage : ContentPage
         _onChanged = onChanged;
         _isNewLaunch = isNew;
         Id = PageId;
-        Icon = new IconInfo("\uE756");
+        Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(launch));
         Title = isNew ? "Add terminal" : $"Edit {launch.Label}";
         Name = isNew ? "Add" : "Edit";
     }
@@ -51,7 +51,7 @@ internal sealed partial class ShortcutLaunchFormPage : ContentPage
         _onChanged = onChanged;
         _isNewLaunch = isNew;
         Id = PageId;
-        Icon = new IconInfo("\uE756");
+        Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(launch));
         Title = isNew ? "Add terminal" : $"Edit {launch.Label}";
         Name = isNew ? "Add" : "Edit";
     }

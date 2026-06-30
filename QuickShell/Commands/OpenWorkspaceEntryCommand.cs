@@ -21,7 +21,7 @@ internal sealed partial class OpenWorkspaceEntryCommand : InvokableCommand
         _settings = settings;
         Id = WorkspaceCommandIds.OpenEntry(workspace.Id, entry.Id);
         Name = entry.Label;
-        Icon = new IconInfo("\uE756");
+        Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(entry));
     }
 
     public override CommandResult Invoke()

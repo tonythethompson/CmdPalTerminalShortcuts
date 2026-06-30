@@ -332,6 +332,52 @@ public class Main : IPlugin, IPluginI18n, IContextMenu, ISettingProvider, IReloa
 
 
 
+        if (ShortcutHealth.NeedsRepair(shortcut))
+
+        {
+
+            return
+
+            [
+
+                CreateContextMenu("Edit shortcut", "\uE70F", _ =>
+
+                {
+
+                    ExecuteManageShortcutEdit(shortcut);
+
+                    return false;
+
+                }),
+
+                CreateContextMenu("Delete shortcut", "\uE74D", _ =>
+
+                {
+
+                    if (!Shortcuts.Delete(shortcut.Name))
+
+                    {
+
+                        return false;
+
+                    }
+
+
+
+                    NotifyStatus($"Deleted shortcut '{shortcut.Name}'.");
+
+                    RefreshResults();
+
+                    return false;
+
+                }),
+
+            ];
+
+        }
+
+
+
         return
 
         [
@@ -680,15 +726,19 @@ public class Main : IPlugin, IPluginI18n, IContextMenu, ISettingProvider, IReloa
 
     {
 
+        var needsRepair = ShortcutHealth.NeedsRepair(shortcut);
+
         return new Result
 
         {
 
             Title = shortcut.Name,
 
-            SubTitle = ShortcutDisplay.BuildSubtitle(shortcut),
+            SubTitle = ShortcutHealth.BuildListSubtitle(shortcut),
 
-            IcoPath = _iconPath,
+            Glyph = ShortcutHealth.GetListGlyph(shortcut),
+
+            FontFamily = IconFont,
 
             Score = ComputeScore(shortcut, search),
 
@@ -697,6 +747,18 @@ public class Main : IPlugin, IPluginI18n, IContextMenu, ISettingProvider, IReloa
             Action = action =>
 
             {
+
+                if (needsRepair)
+
+                {
+
+                    ExecuteManageShortcutEdit(shortcut);
+
+                    return false;
+
+                }
+
+
 
                 var forceAdmin = action.SpecialKeyState.CtrlPressed && action.SpecialKeyState.ShiftPressed;
 

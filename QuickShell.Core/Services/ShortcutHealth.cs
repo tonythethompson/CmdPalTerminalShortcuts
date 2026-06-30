@@ -38,7 +38,7 @@ internal static class ShortcutHealth
             return ShortcutGlyphs.AdminLaunch;
         }
 
-        return ShortcutGlyphs.NewWindow;
+        return TerminalLaunchGlyphs.GetForShortcut(shortcut);
     }
 
     public static string BuildListSubtitle(TerminalShortcut shortcut)

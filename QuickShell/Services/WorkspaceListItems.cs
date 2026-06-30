@@ -25,14 +25,7 @@ internal static class WorkspaceListItems
 
         if (workspace.IsPinned)
         {
-            item.Tags =
-            [
-                new Tag
-                {
-                    Text = "Favorite",
-                    Icon = new IconInfo(ShortcutGlyphs.FavoriteFilled),
-                },
-            ];
+            item.Tags = [FavoriteTagStyle.CreateFavoriteTag("Favorite")];
         }
 
         if (onChanged is not null)

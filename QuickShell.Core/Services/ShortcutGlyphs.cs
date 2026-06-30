@@ -15,4 +15,10 @@ internal static class ShortcutGlyphs
     public const string IncidentTriangle = "\uE814";
 
     public const string Terminal = "\uE756";
+
+    public const string PowerShell = "\uE943";
+
+    public const string CommandPrompt = "\uE756";
+
+    public const string Linux = "\uF186";
 }

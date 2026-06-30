@@ -26,7 +26,7 @@ internal sealed partial class WorkspaceEntryFormPage : ContentPage
         _onChanged = onChanged;
         _isNewEntry = isNew;
         Id = PageId;
-        Icon = new IconInfo("\uE756");
+        Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(entry));
         Title = $"Edit {entry.Label}";
         Name = "Edit";
     }
@@ -38,7 +38,7 @@ internal sealed partial class WorkspaceEntryFormPage : ContentPage
         _onChanged = onChanged;
         _isNewEntry = false;
         Id = PageId;
-        Icon = new IconInfo("\uE756");
+        Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(entry));
         Title = $"Edit {entry.Label}";
         Name = "Edit";
     }

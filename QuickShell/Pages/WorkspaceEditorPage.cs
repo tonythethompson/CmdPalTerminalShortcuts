@@ -95,7 +95,7 @@ internal sealed partial class WorkspaceEditorPage : DynamicListPage
             {
                 Title = entry.Label,
                 Subtitle = WorkspaceDisplay.BuildEntrySubtitle(entry),
-                Icon = new IconInfo(entry.IsEnabled ? "\uE756" : "\uE7BA"),
+                Icon = new IconInfo(entry.IsEnabled ? TerminalLaunchGlyphs.GetForLaunch(entry) : "\uE7BA"),
                 MoreCommands = moreCommands.ToArray(),
             });
         }

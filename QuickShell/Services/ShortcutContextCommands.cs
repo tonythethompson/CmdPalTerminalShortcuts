@@ -57,7 +57,7 @@ internal static class ShortcutContextCommands
                 items.Add(new CommandContextItem(new OpenShortcutLaunchCommand(shortcut, launch, settings))
                 {
                     Title = $"Open {launch.Label}",
-                    Icon = new IconInfo("\uE756"),
+                    Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(launch)),
                 });
             }
         }
@@ -157,9 +157,8 @@ internal static class ShortcutContextCommands
 
     public static CommandContextItem[] BuildRepairOnly(TerminalShortcut shortcut, Action onChanged)
     {
-        var deleteCommand = new DeleteShortcutCommand(shortcut.Name, onChanged);
-        return
-        [
+        var items = new List<CommandContextItem>
+        {
             WithShortcut(
                 new ShortcutFormPage(shortcut, onChanged),
                 ctrl: true,
@@ -169,17 +168,35 @@ internal static class ShortcutContextCommands
                 title: "Edit",
                 showInHoverActions: true,
                 hoverOrder: HoverOrderEdit),
-            WithShortcut(
-                deleteCommand,
+        };
+
+        if (shortcut.IsPinned)
+        {
+            var favoriteCommand = new ToggleFavoriteShortcutCommand(shortcut.Name, onChanged, shortcut.IsPinned);
+            items.Add(WithShortcut(
+                favoriteCommand,
                 ctrl: true,
                 alt: false,
                 shift: false,
-                VirtualKey.Delete,
-                title: deleteCommand.Name,
-                isCritical: true,
+                VirtualKey.F,
+                title: favoriteCommand.Name,
                 showInHoverActions: true,
-                hoverOrder: HoverOrderDelete),
-        ];
+                hoverOrder: HoverOrderFavorite));
+        }
+
+        var deleteCommand = new DeleteShortcutCommand(shortcut.Name, onChanged);
+        items.Add(WithShortcut(
+            deleteCommand,
+            ctrl: true,
+            alt: false,
+            shift: false,
+            VirtualKey.Delete,
+            title: deleteCommand.Name,
+            isCritical: true,
+            showInHoverActions: true,
+            hoverOrder: HoverOrderDelete));
+
+        return items.ToArray();
     }
 
     public static CommandContextItem[] BuildUndoRedoCommands(Action onChanged) =>

@@ -21,7 +21,7 @@ internal sealed partial class DuplicateShortcutCommand : InvokableCommand
         var duplicate = QuickShellRuntimeServices.Shortcuts.BuildDuplicate(_sourceName);
         if (duplicate is null)
         {
-            return QuickShellNavigation.StayOpen($"Shortcut '{_sourceName}' was not found.");
+            return QuickShellNavigation.StayOpen($"Project '{_sourceName}' was not found.");
         }
 
         QuickShellRuntimeServices.Shortcuts.Upsert(duplicate);

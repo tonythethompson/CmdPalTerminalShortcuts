@@ -26,7 +26,7 @@ internal sealed class QuickShellSettingsManager
             TerminalCatalogChoices.GetTerminalApplicationChoices())
         {
             Label = "Terminal application",
-            Description = "The terminal host used for Default shortcuts and profile launches. Matches Windows Terminal's \"Default terminal application\" setting.",
+            Description = "The terminal host used for Default projects and profile launches. Matches Windows Terminal's \"Default terminal application\" setting.",
         };
 
         _defaultProfileSetting = new ChoiceSetSetting(
@@ -34,7 +34,7 @@ internal sealed class QuickShellSettingsManager
             TerminalCatalogChoices.GetDefaultProfileChoices(TerminalHostIds.WindowsTerminal))
         {
             Label = "Default profile",
-            Description = "Profile used when a shortcut is set to Default. Per-shortcut profile choices stay on each shortcut.",
+            Description = "Profile used when a project is set to Default. Per-project profile choices stay on each project.",
         };
 
         _settings.Add(_terminalApplicationSetting);

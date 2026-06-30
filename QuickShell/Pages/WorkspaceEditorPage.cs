@@ -102,8 +102,8 @@ internal sealed partial class WorkspaceEditorPage : DynamicListPage
 
         items.Add(new ListItem(new AddWorkspaceEntryCommand(_workspace, ApplyWorkspaceChange))
         {
-            Title = "Add launch",
-            Subtitle = "Open a new terminal entry in this workspace",
+            Title = "+ Add terminal",
+            Subtitle = "Open another terminal when this workspace runs",
             Icon = new IconInfo("\uE710"),
         });
 
@@ -137,7 +137,7 @@ internal sealed partial class AddWorkspaceEntryCommand : InvokableCommand
     public override CommandResult Invoke()
     {
         var nextOrder = _workspace.Entries.Count == 0 ? 0 : _workspace.Entries.Max(entry => entry.Order) + 1;
-        var entry = WorkspaceEditorState.CreateEntry("New launch", null, nextOrder);
+        var entry = WorkspaceEditorState.CreateEntry($"Terminal {nextOrder + 1}", null, nextOrder);
         WorkspaceNavigationState.SetEntryForm(_workspace, entry, _onChanged, isNew: true);
         return CommandResult.GoToPage(new GoToPageArgs
         {

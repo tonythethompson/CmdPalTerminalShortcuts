@@ -10,5 +10,9 @@ internal static class ShortcutGlyphs
 
     public const string AdminLaunch = "\uE7EF";
 
+    public const string NewWindow = "\uE78B";
+
+    public const string IncidentTriangle = "\uE814";
+
     public const string Terminal = "\uE756";
 }

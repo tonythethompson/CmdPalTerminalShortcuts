@@ -51,7 +51,7 @@ After you install a new terminal or edit profiles, use **Refresh terminal list**
 
 ### Option 1 — Microsoft Store (recommended)
 
-[Get Quick Shell from the Microsoft Store](https://apps.microsoft.com/detail/9PC8S6LNRT3R) (Store ID: `9PC8S6LNRT3R`).
+[Get Quick Shell for CmdPal from the Microsoft Store](https://apps.microsoft.com/detail/9PC8S6LNRT3R) (Store ID: `9PC8S6LNRT3R`). In Command Palette, search **Quick Shell**.
 
 ### Option 2 — WinGet
 
@@ -200,13 +200,17 @@ For contributors and local MSIX installs (recommended for development):
 **Prerequisites:** Windows 11, .NET 10 SDK, Visual Studio 2022 (Windows workload), PowerToys with Command Palette enabled.
 
 ```powershell
-# MSIX install (dev-signed, full Command Palette integration)
+# Default dev loop: stop CmdPal → build/install MSIX → start CmdPal
 .\scripts\deploy.ps1
 
-# WinGet-style EXE installers (x64 + ARM64)
-cd QuickShell
-.\build-exe.ps1 -Version 0.1.6.0
+# Same, with local PowerToys CmdPal SDK (sibling PowerToys checkout)
+.\scripts\run-cmdpal-dev.ps1 -UseLocalSdk
+
+# Skip UAC entirely (trusts cert in CurrentUser\TrustedPeople)
+.\scripts\deploy.ps1 -SkipElevation
 ```
+
+After the first successful install, `deploy.ps1` stays in your current terminal — it only elevates when the dev certificate is not trusted yet. Approve UAC once if prompted; later runs skip elevation automatically.
 
 Then run **Reload Command Palette Extension** in Command Palette.
 

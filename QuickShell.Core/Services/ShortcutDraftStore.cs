@@ -90,9 +90,26 @@ internal sealed partial class ShortcutDraftStore(IShortcutRepository shortcuts) 
             Directory = draft.Directory,
             Command = draft.Command,
             LaunchTarget = draft.LaunchTarget,
+            DevServerUrl = draft.DevServerUrl,
+            RepoUrl = draft.RepoUrl,
+            OpenCompanionAppOnLaunch = draft.OpenCompanionAppOnLaunch,
+            CompanionAppPreset = draft.CompanionAppPreset,
+            CompanionAppPath = draft.CompanionAppPath,
+            CompanionAppArguments = draft.CompanionAppArguments,
             NameCustomized = nameCustomized,
             AutoFilledName = autoFilledName,
             RunAsAdmin = draft.RunAsAdmin,
+            Launches = draft.Launches
+                .Select(launch => new PersistedShortcutLaunchDraft
+                {
+                    Id = launch.Id,
+                    Label = launch.Label,
+                    Command = launch.Command,
+                    LaunchTarget = launch.LaunchTarget,
+                    RunAsAdmin = launch.RunAsAdmin,
+                    IsEnabled = launch.IsEnabled,
+                })
+                .ToList(),
         };
 
         WithLock(() =>
@@ -119,21 +136,47 @@ internal sealed partial class ShortcutDraftStore(IShortcutRepository shortcuts) 
             return true;
         });
 
-        if (!hasPending)
+        if (!hasPending || pending is null)
         {
             return ShortcutSaveResult.Fail("No unsaved shortcut edit is pending.");
         }
 
-        var result = ShortcutFormSave.TrySave(
-            pending!.OriginalName,
-            pending.Name,
-            pending.Abbreviation,
-            pending.Directory,
-            pending.Command,
-            pending.LaunchTarget,
-            pending.RunAsAdmin,
-            _shortcuts,
-            onSaved);
+        var launches = pending.Launches is { Count: > 0 }
+            ? pending.Launches.Select(launch => new ShortcutFormLaunchInput
+            {
+                Id = launch.Id,
+                Label = launch.Label,
+                Command = launch.Command,
+                LaunchTarget = launch.LaunchTarget,
+                RunAsAdmin = launch.RunAsAdmin,
+                IsEnabled = launch.IsEnabled,
+            }).ToList()
+            : null;
+
+        var result = launches is null
+            ? ShortcutFormSave.TrySave(
+                pending.OriginalName,
+                pending.Name,
+                pending.Abbreviation,
+                pending.Directory,
+                pending.Command,
+                pending.LaunchTarget,
+                pending.RunAsAdmin,
+                _shortcuts,
+                onSaved)
+            : ShortcutFormSave.TrySave(
+                pending.OriginalName,
+                pending.Name,
+                pending.Abbreviation,
+                pending.Directory,
+                launches,
+                _shortcuts,
+                onSaved,
+                pending.DevServerUrl,
+                pending.RepoUrl,
+                pending.OpenCompanionAppOnLaunch,
+                pending.CompanionAppPath,
+                pending.CompanionAppArguments);
 
         if (result.Success)
         {
@@ -268,22 +311,120 @@ internal sealed partial class ShortcutDraftStore(IShortcutRepository shortcuts) 
 
     private static bool DraftMatchesShortcut(PersistedShortcutEditDraft draft, TerminalShortcut saved)
     {
-        var launchTarget = TerminalCatalog.EncodeLaunchTargetId(saved);
-        return string.Equals(Normalize(draft.Name), Normalize(saved.Name), StringComparison.Ordinal)
-            && string.Equals(Normalize(draft.Abbreviation), Normalize(saved.Abbreviation), StringComparison.Ordinal)
-            && string.Equals(Normalize(draft.Directory), Normalize(saved.Directory), StringComparison.Ordinal)
-            && string.Equals(Normalize(draft.Command), Normalize(saved.Command), StringComparison.Ordinal)
-            && string.Equals(Normalize(draft.LaunchTarget), Normalize(launchTarget), StringComparison.Ordinal)
-            && draft.RunAsAdmin == saved.RunAsAdmin;
+        ShortcutLaunchNormalization.EnsureLaunchesFromLegacy(saved);
+
+        if (!MetadataMatches(draft, saved))
+        {
+            return false;
+        }
+
+        if (draft.Launches is not { Count: > 0 })
+        {
+            var launchTarget = TerminalCatalog.EncodeLaunchTargetId(saved);
+            var first = saved.Launches.OrderBy(entry => entry.Order).FirstOrDefault();
+            return string.Equals(Normalize(draft.Command), Normalize(first?.Command), StringComparison.Ordinal)
+                && string.Equals(Normalize(draft.LaunchTarget), Normalize(launchTarget), StringComparison.Ordinal)
+                && draft.RunAsAdmin == (first?.RunAsAdmin ?? false);
+        }
+
+        return LaunchDraftsMatchShortcut(draft.Launches, saved.Launches);
     }
 
-    private static bool DraftEquals(ShortcutFormDraftData left, ShortcutFormDraftData right) =>
+    private static bool MetadataMatches(PersistedShortcutEditDraft draft, TerminalShortcut saved) =>
+        string.Equals(Normalize(draft.Name), Normalize(saved.Name), StringComparison.Ordinal)
+        && string.Equals(Normalize(draft.Abbreviation), Normalize(saved.Abbreviation), StringComparison.Ordinal)
+        && string.Equals(Normalize(draft.Directory), Normalize(saved.Directory), StringComparison.Ordinal)
+        && string.Equals(Normalize(draft.DevServerUrl), Normalize(saved.DevServerUrl), StringComparison.Ordinal)
+        && string.Equals(Normalize(draft.RepoUrl), Normalize(saved.RepoUrl), StringComparison.Ordinal)
+        && draft.OpenCompanionAppOnLaunch == saved.OpenCompanionAppOnLaunch
+        && string.Equals(Normalize(draft.CompanionAppPath), Normalize(saved.CompanionAppPath), StringComparison.Ordinal)
+        && string.Equals(Normalize(draft.CompanionAppArguments), Normalize(saved.CompanionAppArguments), StringComparison.Ordinal);
+
+    private static bool DraftEquals(ShortcutFormDraftData left, ShortcutFormDraftData right)
+    {
+        if (!MetadataMatchesDraft(left, right))
+        {
+            return false;
+        }
+
+        if (left.Launches.Count == 0 && right.Launches.Count == 0)
+        {
+            return string.Equals(Normalize(left.Command), Normalize(right.Command), StringComparison.Ordinal)
+                && string.Equals(Normalize(left.LaunchTarget), Normalize(right.LaunchTarget), StringComparison.Ordinal)
+                && left.RunAsAdmin == right.RunAsAdmin;
+        }
+
+        return LaunchDraftListsEqual(left.Launches, right.Launches);
+    }
+
+    private static bool MetadataMatchesDraft(ShortcutFormDraftData left, ShortcutFormDraftData right) =>
         string.Equals(Normalize(left.Name), Normalize(right.Name), StringComparison.Ordinal)
         && string.Equals(Normalize(left.Abbreviation), Normalize(right.Abbreviation), StringComparison.Ordinal)
         && string.Equals(Normalize(left.Directory), Normalize(right.Directory), StringComparison.Ordinal)
-        && string.Equals(Normalize(left.Command), Normalize(right.Command), StringComparison.Ordinal)
-        && string.Equals(Normalize(left.LaunchTarget), Normalize(right.LaunchTarget), StringComparison.Ordinal)
-        && left.RunAsAdmin == right.RunAsAdmin;
+        && string.Equals(Normalize(left.DevServerUrl), Normalize(right.DevServerUrl), StringComparison.Ordinal)
+        && string.Equals(Normalize(left.RepoUrl), Normalize(right.RepoUrl), StringComparison.Ordinal)
+        && left.OpenCompanionAppOnLaunch == right.OpenCompanionAppOnLaunch
+        && string.Equals(Normalize(left.CompanionAppPath), Normalize(right.CompanionAppPath), StringComparison.Ordinal)
+        && string.Equals(Normalize(left.CompanionAppArguments), Normalize(right.CompanionAppArguments), StringComparison.Ordinal);
+
+    private static bool LaunchDraftListsEqual(
+        IReadOnlyList<ShortcutFormLaunchDraftData> left,
+        IReadOnlyList<ShortcutFormLaunchDraftData> right)
+    {
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < left.Count; i++)
+        {
+            var a = left[i];
+            var b = right[i];
+            if (!string.Equals(Normalize(a.Label), Normalize(b.Label), StringComparison.Ordinal)
+                || !string.Equals(Normalize(a.Command), Normalize(b.Command), StringComparison.Ordinal)
+                || !string.Equals(Normalize(a.LaunchTarget), Normalize(b.LaunchTarget), StringComparison.Ordinal)
+                || a.RunAsAdmin != b.RunAsAdmin
+                || a.IsEnabled != b.IsEnabled)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool LaunchDraftsMatchShortcut(
+        IReadOnlyList<PersistedShortcutLaunchDraft> draftLaunches,
+        IReadOnlyList<WorkspaceEntry> savedLaunches)
+    {
+        var saved = savedLaunches.OrderBy(entry => entry.Order).ToList();
+        if (draftLaunches.Count != saved.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < draftLaunches.Count; i++)
+        {
+            var draft = draftLaunches[i];
+            var entry = saved[i];
+            var launchTarget = TerminalCatalog.EncodeLaunchTargetId(new TerminalShortcut
+            {
+                Terminal = entry.Terminal,
+                WtProfile = entry.WtProfile,
+            });
+
+            if (!string.Equals(Normalize(draft.Label), Normalize(entry.Label), StringComparison.Ordinal)
+                || !string.Equals(Normalize(draft.Command), Normalize(entry.Command), StringComparison.Ordinal)
+                || !string.Equals(Normalize(draft.LaunchTarget), Normalize(launchTarget), StringComparison.Ordinal)
+                || draft.RunAsAdmin != entry.RunAsAdmin
+                || draft.IsEnabled != entry.IsEnabled)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static string Normalize(string? value) => (value ?? string.Empty).Trim();
 

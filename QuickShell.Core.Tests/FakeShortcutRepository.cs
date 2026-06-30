@@ -70,6 +70,8 @@ internal sealed class FakeShortcutRepository : IShortcutRepository
     public Task<ShortcutTransferResult> ImportReplaceAsync(string path, CancellationToken cancellationToken = default) =>
         Task.FromResult(new ShortcutTransferResult());
 
+    public ShortcutTransferResult ResetAll() => new() { Success = true, Message = "No projects to reset." };
+
     public bool CanUndo => false;
 
     public bool CanRedo => false;

@@ -12,13 +12,28 @@ internal static class ShortcutDisplay
 
     public static string BuildSubtitle(TerminalShortcut shortcut)
     {
+        ShortcutLaunchNormalization.EnsureLaunchesFromLegacy(shortcut);
+
         var parts = new List<string> { ShortenPath(shortcut.Directory) };
 
-        parts.Add(TerminalCatalog.GetDisplayName(shortcut));
-
-        if (!string.IsNullOrWhiteSpace(shortcut.Command))
+        var enabledLaunches = ShortcutLaunchNormalization.GetEnabledLaunches(shortcut);
+        if (enabledLaunches.Count > 1)
         {
-            parts.Add(shortcut.Command);
+            parts.Add(string.Join(" · ", enabledLaunches.Select(entry => entry.Label)));
+        }
+        else if (enabledLaunches.Count == 1)
+        {
+            var launch = enabledLaunches[0];
+            parts.Add(TerminalCatalog.GetDisplayName(new TerminalShortcut
+            {
+                Terminal = launch.Terminal,
+                WtProfile = launch.WtProfile,
+            }));
+
+            if (!string.IsNullOrWhiteSpace(launch.Command))
+            {
+                parts.Add(launch.Command);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(shortcut.Abbreviation))

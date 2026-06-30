@@ -7,7 +7,7 @@ namespace QuickShell.Services;
 internal static class ShortcutLayoutDisplay
 {
     public const string FavoritesSectionTitle = "Favorites";
-    public const string ShortcutsSectionTitle = "Shortcuts";
+    public const string ShortcutsSectionTitle = "Workspaces";
 
     public static IEnumerable<IListItem> BuildListItems(
         IReadOnlyList<ShortcutLayoutEntry> layout,

@@ -2,7 +2,7 @@ using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Commands;
 using QuickShell.Models;
-using QuickShell.Services;
+using QuickShell.Pages;
 
 namespace QuickShell.Services;
 

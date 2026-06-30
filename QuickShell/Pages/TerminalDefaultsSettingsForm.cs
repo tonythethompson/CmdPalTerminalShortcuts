@@ -76,7 +76,7 @@ internal sealed partial class TerminalDefaultsSettingsForm : FormContent
         var bodyParts = new List<string>
         {
             SettingsCardJson.SectionHeader("Terminal defaults"),
-            SettingsCardJson.SubtleText("Default host and profile for shortcuts set to Default."),
+            SettingsCardJson.SubtleText("Default host and profile for projects set to Default."),
             """
             {
               "type": "ActionSet",

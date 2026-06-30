@@ -82,7 +82,7 @@ internal sealed partial class QuickShellExtensionSettingsPage : ContentPage
 
 
 
-        Title = "Quick Shell settings";
+        Title = QuickShellBrand.SettingsTitle;
 
 
 

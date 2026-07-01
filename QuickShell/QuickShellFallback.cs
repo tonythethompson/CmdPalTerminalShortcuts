@@ -170,11 +170,11 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
 
 
 
-    private void ApplyGitRepoResult(IReadOnlyList<GitRepoCandidate> gitRepos)
+    private void ApplyGitRepoResult(GitRepoCandidate[] gitRepos)
 
     {
 
-        if (gitRepos.Count == 1)
+        if (gitRepos.Length == 1)
 
         {
 
@@ -188,7 +188,7 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
 
         {
 
-            Title = $"{gitRepos.Count} git repos";
+            Title = $"{gitRepos.Length} git repos";
 
             Subtitle = $"Matching \"{_lastQuery}\"";
 

@@ -336,9 +336,9 @@ public class Main : IPlugin, IPluginI18n, IContextMenu, ISettingProvider, IReloa
 
         {
 
-            return
+            var repairMenus = new List<ContextMenuResult>
 
-            [
+            {
 
                 CreateContextMenu("Edit shortcut", "\uE70F", _ =>
 
@@ -350,29 +350,51 @@ public class Main : IPlugin, IPluginI18n, IContextMenu, ISettingProvider, IReloa
 
                 }),
 
-                CreateContextMenu("Delete shortcut", "\uE74D", _ =>
+            };
+
+            if (shortcut.IsPinned)
+
+            {
+
+                repairMenus.Add(CreateContextMenu("Unfavorite", "\uE735", _ =>
 
                 {
 
-                    if (!Shortcuts.Delete(shortcut.Name))
+                    Shortcuts.TogglePinned(shortcut.Name);
 
-                    {
-
-                        return false;
-
-                    }
-
-
-
-                    NotifyStatus($"Deleted shortcut '{shortcut.Name}'.");
+                    NotifyStatus($"Removed '{shortcut.Name}' from favorites.");
 
                     RefreshResults();
 
                     return false;
 
-                }),
+                }));
 
-            ];
+            }
+
+            repairMenus.Add(CreateContextMenu("Delete shortcut", "\uE74D", _ =>
+
+            {
+
+                if (!Shortcuts.Delete(shortcut.Name))
+
+                {
+
+                    return false;
+
+                }
+
+
+
+                NotifyStatus($"Deleted shortcut '{shortcut.Name}'.");
+
+                RefreshResults();
+
+                return false;
+
+            }));
+
+            return repairMenus;
 
         }
 

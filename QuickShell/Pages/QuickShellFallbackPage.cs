@@ -119,7 +119,7 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
         RaiseItemsChanged();
     }
 
-    private IReadOnlyList<GitRepoCandidate> GetDiscoverPreviewRepos()
+    private static List<GitRepoCandidate> GetDiscoverPreviewRepos()
     {
         var extraRoots = GitRepoSearchRoots.FromShortcuts(QuickShellRuntimeServices.Shortcuts.GetShortcuts());
         var savedDirectories = QuickShellRuntimeServices.Shortcuts.GetShortcuts()
@@ -160,11 +160,12 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
     private ListItem BuildShortcutItem(TerminalShortcut shortcut)
     {
         var item = ShortcutListItems.CreateOpen(shortcut, _settings, _onReload);
-        if (!ShortcutHealth.NeedsRepair(shortcut))
+        if (ShortcutHealth.NeedsRepair(shortcut))
         {
-            item.Subtitle = ShortcutDisplay.BuildDirectorySubtitle(shortcut);
+            return item;
         }
 
+        item.Subtitle = ShortcutDisplay.BuildDirectorySubtitle(shortcut);
         item.MoreCommands = ShortcutContextCommands.Build(shortcut, _onReload, _settings, includeEdit: false);
         return item;
     }

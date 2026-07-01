@@ -80,5 +80,13 @@ function Start-CommandPalette {
         return
     }
 
+    $powerToysRoot = Get-CmdPalPowerToysRoot -ProjectRoot $ProjectRoot
+    $devExe = Get-CmdPalDevExecutable -PowerToysRoot $powerToysRoot -Configuration $Configuration
+    if ($devExe) {
+        Write-Host "Retail PowerToys not found; starting local CmdPal build: $devExe"
+        Start-Process -FilePath $devExe -WorkingDirectory (Split-Path $devExe -Parent)
+        return
+    }
+
     Write-Warning 'Could not find Command Palette. Install PowerToys or build CmdPal from a sibling PowerToys checkout.'
 }

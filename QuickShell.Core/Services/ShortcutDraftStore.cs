@@ -368,8 +368,8 @@ internal sealed partial class ShortcutDraftStore(IShortcutRepository shortcuts) 
         && string.Equals(Normalize(left.CompanionAppArguments), Normalize(right.CompanionAppArguments), StringComparison.Ordinal);
 
     private static bool LaunchDraftListsEqual(
-        IReadOnlyList<ShortcutFormLaunchDraftData> left,
-        IReadOnlyList<ShortcutFormLaunchDraftData> right)
+        List<ShortcutFormLaunchDraftData> left,
+        List<ShortcutFormLaunchDraftData> right)
     {
         if (left.Count != right.Count)
         {
@@ -394,8 +394,8 @@ internal sealed partial class ShortcutDraftStore(IShortcutRepository shortcuts) 
     }
 
     private static bool LaunchDraftsMatchShortcut(
-        IReadOnlyList<PersistedShortcutLaunchDraft> draftLaunches,
-        IReadOnlyList<WorkspaceEntry> savedLaunches)
+        List<PersistedShortcutLaunchDraft> draftLaunches,
+        List<WorkspaceEntry> savedLaunches)
     {
         var saved = savedLaunches.OrderBy(entry => entry.Order).ToList();
         if (draftLaunches.Count != saved.Count)

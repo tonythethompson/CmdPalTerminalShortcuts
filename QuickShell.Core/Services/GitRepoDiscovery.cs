@@ -181,7 +181,7 @@ internal static partial class GitRepoDiscovery
             foreach (var rawLine in File.ReadLines(configPath))
             {
                 var line = rawLine.Trim();
-                if (line.StartsWith("[", StringComparison.Ordinal))
+                if (line.StartsWith('['))
                 {
                     inOriginSection = line.Equals("[remote \"origin\"]", StringComparison.OrdinalIgnoreCase);
                     continue;

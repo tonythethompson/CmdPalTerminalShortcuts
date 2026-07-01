@@ -97,6 +97,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <!-- dotnet build without -p:Platform=x64 still needs an RID when RuntimeIdentifiers is set (NETSDK1097). -->
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
     <!-- In Debug builds, trimming is disabled by default, but all the trim & 
          AOT warnings are enabled. This gives debug builds a tighter inner loop,
          while at least warning about future trim violations -->

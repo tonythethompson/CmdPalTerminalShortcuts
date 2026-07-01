@@ -56,8 +56,7 @@ Copy-Item (Join-Path $assetsDir 'StoreLogo.png') (Join-Path $runImagesDir 'quick
 
 
 Write-Host "Quick Shell assets generated from logo-micro.svg:"
-
 Write-Host "  MSIX: $assetsDir"
-
+Write-Host "  Store listing (Partner Center): $(Join-Path $assetsDir 'StoreListing')"
 Write-Host "  Run:  $runImagesDir"
 

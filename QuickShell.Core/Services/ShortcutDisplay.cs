@@ -5,6 +5,23 @@ namespace QuickShell.Services;
 
 internal static class ShortcutDisplay
 {
+    public static string GetLaunchContextMenuTitle(WorkspaceEntry entry)
+    {
+        var command = CollapseToSingleLine(entry.Command);
+        if (!string.IsNullOrWhiteSpace(command))
+        {
+            return command.Trim();
+        }
+
+        var label = (entry.Label ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            return label;
+        }
+
+        return "Open folder";
+    }
+
     public static string BuildDirectorySubtitle(TerminalShortcut shortcut)
     {
         return string.Join(" · ", ShortenPath(shortcut.Directory), TerminalCatalog.GetDisplayName(shortcut));
@@ -19,7 +36,7 @@ internal static class ShortcutDisplay
         var enabledLaunches = ShortcutLaunchNormalization.GetEnabledLaunches(shortcut);
         if (enabledLaunches.Count > 1)
         {
-            parts.Add(string.Join(" · ", enabledLaunches.Select(entry => entry.Label)));
+            parts.Add(string.Join(" · ", enabledLaunches.Select(GetLaunchContextMenuTitle)));
         }
         else if (enabledLaunches.Count == 1)
         {
@@ -64,6 +81,11 @@ internal static class ShortcutDisplay
     }
 
     private static string ShortenPath(string path) => ShortenPathForDisplay(path);
+
+    private static string CollapseToSingleLine(string? value) =>
+        string.Join(
+            ' ',
+            (value ?? string.Empty).Split(['\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
     private static string FormatRelativeTime(DateTime utc)
     {

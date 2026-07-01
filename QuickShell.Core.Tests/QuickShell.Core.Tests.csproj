@@ -8,6 +8,8 @@
     <IsPackable>false</IsPackable>
     <Platforms>x64;ARM64</Platforms>
     <PlatformTarget>$(Platform)</PlatformTarget>
+    <!-- xUnit method names use underscores by convention. -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

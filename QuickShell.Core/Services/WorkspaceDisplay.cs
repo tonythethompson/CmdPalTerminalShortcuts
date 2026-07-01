@@ -18,7 +18,7 @@ internal static class WorkspaceDisplay
         var enabledEntries = workspace.Entries
             .Where(entry => entry.IsEnabled)
             .OrderBy(entry => entry.Order)
-            .Select(entry => entry.Label)
+            .Select(ShortcutDisplay.GetLaunchContextMenuTitle)
             .ToList();
 
         return string.Join(" · ", enabledEntries);
@@ -30,7 +30,7 @@ internal static class WorkspaceDisplay
         parts.AddRange(workspace.Entries
             .Where(entry => entry.IsEnabled)
             .OrderBy(entry => entry.Order)
-            .Select(entry => entry.Label));
+            .Select(ShortcutDisplay.GetLaunchContextMenuTitle));
 
         if (!WorkspaceHealth.NeedsFolder(workspace))
         {

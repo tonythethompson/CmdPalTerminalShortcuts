@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Quick Shell micro: terminal, folder, and lightning bolt" shape-rendering="geometricPrecision">
+  <title>Micro Folder Bolt</title>
+
+  <defs>
+    <radialGradient id="bgDepth" cx="48%" cy="42%" r="72%">
+      <stop offset="0%" stop-color="#262A33"/>
+      <stop offset="100%" stop-color="#181C24"/>
+    </radialGradient>
+
+    <!-- Glass panel: gradient-only (renders reliably in Svg.Skia) -->
+    <linearGradient id="glassShine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.26"/>
+      <stop offset="42%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="glassRim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+    </linearGradient>
+
+    <radialGradient id="glassDepth" cx="50%" cy="88%" r="62%">
+      <stop offset="0%" stop-color="#0E1520" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#0E1520" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="64" fill="url(#bgDepth)"/>
+  <rect width="512" height="512" rx="64" fill="url(#glassDepth)"/>
+  <rect width="512" height="512" rx="64" fill="url(#glassShine)"/>
+  <rect width="512" height="512" rx="64" fill="none" stroke="url(#glassRim)" stroke-width="2.5"/>
+
+  <!-- Folder: Icons8 PNG (icons8-folder-384.png) -->
+  <image href="icons8-folder-384.png" x="66" y="66" width="380" height="380"/>
+
+  <!-- Lightning bolt: line style (Noun Project shape 1782228) -->
+  <g transform="translate(256 256) scale(3.2) translate(-54.5 -58.5)">
+    <path d="M108 0L35 45L61 46L10 78L37 79L0 116L80 64L57 63L106 31L78 30Z" fill="none" stroke="#F0E6C8" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+
+  <!-- Terminal prompt: stroked chevron + baseline cursor -->
+  <g transform="translate(6 -38)">
+    <path
+      d="M42 90 L80 102 L42 114"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-width="7"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+    <rect x="96" y="128" width="56" height="5" rx="2" fill="#FFFFFF"/>
+  </g>
+</svg>

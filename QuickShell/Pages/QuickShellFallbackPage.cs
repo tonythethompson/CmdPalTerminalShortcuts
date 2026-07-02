@@ -104,7 +104,7 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
             {
                 Title = "Discover git repos",
                 Subtitle = "Scan local folders and add as workspaces",
-                Icon = new IconInfo("\uE8A5"),
+                Icon = new IconInfo(ShortcutGlyphs.Discover),
             });
 
             items.AddRange(BuildGitRepoItems(GetDiscoverPreviewRepos()));
@@ -136,18 +136,7 @@ internal sealed partial class QuickShellFallbackPage : DynamicListPage, IDisposa
     {
         foreach (var candidate in gitRepos)
         {
-            var subtitleParts = new List<string> { ShortcutDisplay.ShortenPathForDisplay(candidate.Directory) };
-            if (!string.IsNullOrWhiteSpace(candidate.RemoteUrl))
-            {
-                subtitleParts.Add(candidate.RemoteUrl);
-            }
-
-            yield return new ListItem(new AddGitRepoWorkspaceCommand(candidate, OnGitRepoAdded))
-            {
-                Title = $"Add {candidate.Name}",
-                Subtitle = string.Join(" · ", subtitleParts),
-                Icon = new IconInfo("\uE8A5"),
-            };
+            yield return DiscoverGitRepoListItems.CreateNew(candidate, OnGitRepoAdded, title: $"Add {candidate.Name}");
         }
     }
 

@@ -12,10 +12,10 @@ internal partial class ShortcutFormPage : ContentPage
     private readonly TerminalShortcut? _createSeed;
     private readonly Action? _onSaved;
 
-    public ShortcutFormPage(TerminalShortcut? existing = null, Action? onSaved = null)
+    public ShortcutFormPage(TerminalShortcut? existing = null, Action? onSaved = null, TerminalShortcut? createSeed = null)
     {
         _existing = existing is null ? null : CloneShortcut(existing);
-        _createSeed = existing is null ? ShortcutCreateNavigationState.TryTakeSeed() : null;
+        _createSeed = existing is null ? createSeed ?? ShortcutCreateNavigationState.TryTakeSeed() : null;
         _onSaved = onSaved;
         var isCreate = _existing is null;
         Id = isCreate

@@ -20,5 +20,11 @@ internal static class ShortcutGlyphs
 
     public const string CommandPrompt = "\uE756";
 
-    public const string Linux = "\uF186";
+    public const string Linux = "\U0001F427";
+
+    public const string Discover = "\uE721";
+
+    public const string Add = "\uE710";
+
+    public const string Saved = "\uE73E";
 }

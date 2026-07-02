@@ -26,7 +26,8 @@ internal sealed partial class OpenShortcutLaunchCommand : InvokableCommand
         _runAsAdmin = runAsAdmin;
         _runAsStandard = runAsStandard;
         Id = $"{ShortcutCommandIds.Open(shortcut.Id)}.launch.{launch.Id}";
-        Name = ShortcutDisplay.GetLaunchContextMenuTitle(launch);
+        var enabledLaunches = ShortcutLaunchNormalization.GetEnabledLaunches(shortcut);
+        Name = ShortcutDisplay.GetLaunchContextMenuTitle(launch, enabledLaunches);
         Icon = new IconInfo(
             runAsAdmin || (launch.RunAsAdmin && !runAsStandard)
                 ? ShortcutGlyphs.AdminLaunch

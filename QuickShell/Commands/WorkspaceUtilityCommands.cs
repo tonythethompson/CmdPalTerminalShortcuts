@@ -61,6 +61,28 @@ internal sealed partial class OpenShortcutFolderInExplorerCommand : InvokableCom
     }
 }
 
+internal sealed partial class OpenDirectoryInExplorerCommand : InvokableCommand
+{
+    private readonly string _directory;
+
+    public OpenDirectoryInExplorerCommand(string directory)
+    {
+        _directory = directory;
+        Name = "Open directory";
+        Icon = new IconInfo("\uE838");
+    }
+
+    public override CommandResult Invoke()
+    {
+        if (!FolderPathActions.TryOpenInExplorer(_directory, out var error))
+        {
+            return QuickShellNavigation.StayOpen(error);
+        }
+
+        return CommandResult.Dismiss();
+    }
+}
+
 internal enum WorkspaceLinkKind
 {
     DevServer,
@@ -131,52 +153,10 @@ internal sealed partial class OpenCompanionAppCommand : InvokableCommand
     }
 }
 
-internal sealed partial class OpenDiscoverGitReposCommand : InvokableCommand
+internal sealed class OpenDiscoverGitReposCommand : DiscoverGitReposPage
 {
-    private readonly Action _onReload;
-
     public OpenDiscoverGitReposCommand(Action onReload)
+        : base(onReload)
     {
-        _onReload = onReload;
-        Name = "Discover git repos";
-        Icon = new IconInfo("\uE8A5");
-    }
-
-    public override CommandResult Invoke() =>
-        CommandResult.GoToPage(new GoToPageArgs
-        {
-            PageId = DiscoverGitReposPage.PageId,
-        });
-}
-
-internal sealed partial class AddGitRepoWorkspaceCommand : InvokableCommand
-{
-    private readonly GitRepoCandidate _candidate;
-    private readonly Action _onReload;
-
-    public AddGitRepoWorkspaceCommand(GitRepoCandidate candidate, Action onReload)
-    {
-        _candidate = candidate;
-        _onReload = onReload;
-        Name = "Add";
-        Icon = new IconInfo("\uE710");
-    }
-
-    public override CommandResult Invoke()
-    {
-        var existing = QuickShellRuntimeServices.Shortcuts.GetShortcuts()
-            .FirstOrDefault(shortcut =>
-                string.Equals(shortcut.Directory, _candidate.Directory, StringComparison.OrdinalIgnoreCase));
-        if (existing is not null)
-        {
-            return QuickShellNavigation.StayOpen($"Already saved as '{existing.Name}'.");
-        }
-
-        ShortcutCreateNavigationState.SetSeed(WorkspaceSeedFactory.FromGitRepo(_candidate));
-
-        return CommandResult.GoToPage(new GoToPageArgs
-        {
-            PageId = ShortcutCommandIds.CreateShortcut,
-        });
     }
 }

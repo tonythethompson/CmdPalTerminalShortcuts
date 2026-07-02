@@ -196,7 +196,7 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
 
 
 
-        Icon = new IconInfo("\uE8A5");
+        Icon = new IconInfo(ShortcutGlyphs.Discover);
 
         Command = _listPage;
 
@@ -214,7 +214,7 @@ internal sealed partial class QuickShellFallback : FallbackCommandItem
 
         Subtitle = "Scan local folders and add as workspaces";
 
-        Icon = new IconInfo("\uE8A5");
+        Icon = new IconInfo(ShortcutGlyphs.Discover);
 
         Command = _discoverGitReposCommand;
 

@@ -41,7 +41,7 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $AssetsDir = Join-Path $ProjectRoot 'QuickShell\Assets'
 $DefaultRawDir = Join-Path $AssetsDir 'StoreScreenshots\raw'
 $DefaultPreparedDir = Join-Path $AssetsDir 'StoreScreenshots\prepared'
-$DemoShortcutsPath = Join-Path $PSScriptRoot 'store-demo-shortcuts.json'
+$DemoShortcutsPath = Join-Path $PSScriptRoot 'store-screenshot-shortcuts.json'
 $ShortcutsBackupPath = Join-Path $AssetsDir 'StoreScreenshots\shortcuts-backup.json'
 $LiveShortcutsPath = Join-Path $env:LOCALAPPDATA 'QuickShell\shortcuts.json'
 

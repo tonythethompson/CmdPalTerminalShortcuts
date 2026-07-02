@@ -104,7 +104,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
 
         if (string.Equals(id, ShortcutCommandIds.CreateShortcut, StringComparison.Ordinal))
         {
-            return new CommandItem(_createShortcutCommand)
+            return new CommandItem(new CreateShortcutCommand(ReloadPages))
             {
                 Title = "Create workspace",
                 Subtitle = "Folder and terminal launches",
@@ -114,10 +114,10 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
 
         if (string.Equals(id, DiscoverGitReposPage.PageId, StringComparison.Ordinal))
         {
-            return new CommandItem(new DiscoverGitReposPage(ReloadPages))
+            return new CommandItem(new OpenDiscoverGitReposCommand(ReloadPages))
             {
                 Title = "Discover git repos",
-                Icon = new IconInfo("\uE8A5"),
+                Icon = new IconInfo(ShortcutGlyphs.Discover),
             };
         }
 

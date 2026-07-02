@@ -20,7 +20,8 @@ internal sealed partial class OpenWorkspaceEntryCommand : InvokableCommand
         _entryId = entry.Id;
         _settings = settings;
         Id = WorkspaceCommandIds.OpenEntry(workspace.Id, entry.Id);
-        Name = ShortcutDisplay.GetLaunchContextMenuTitle(entry);
+        var enabledEntries = workspace.Entries.Where(e => e.IsEnabled).ToList();
+        Name = ShortcutDisplay.GetLaunchContextMenuTitle(entry, enabledEntries);
         Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(entry));
     }
 

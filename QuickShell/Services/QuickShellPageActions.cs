@@ -30,7 +30,7 @@ internal static class QuickShellPageActions
         {
             Title = "Discover git repos",
             Subtitle = "Scan local folders and add as workspaces",
-            Icon = new IconInfo("\uE8A5"),
+            Icon = new IconInfo(ShortcutGlyphs.Discover),
             MoreCommands =
             [
                 ..ShortcutContextCommands.BuildUndoRedoCommands(onReload),

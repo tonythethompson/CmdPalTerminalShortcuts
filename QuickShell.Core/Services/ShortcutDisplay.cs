@@ -5,12 +5,23 @@ namespace QuickShell.Services;
 
 internal static class ShortcutDisplay
 {
-    public static string GetLaunchContextMenuTitle(WorkspaceEntry entry)
+    public static string GetLaunchContextMenuTitle(WorkspaceEntry entry) =>
+        GetLaunchContextMenuTitle(entry, siblingLaunches: null);
+
+    public static string GetLaunchContextMenuTitle(
+        WorkspaceEntry entry,
+        IEnumerable<WorkspaceEntry>? siblingLaunches)
     {
         var command = CollapseToSingleLine(entry.Command);
         if (!string.IsNullOrWhiteSpace(command))
         {
             return command.Trim();
+        }
+
+        var launches = siblingLaunches?.ToList() ?? [entry];
+        if (AnyLaunchHasCommand(launches))
+        {
+            return "Open folder only";
         }
 
         var label = (entry.Label ?? string.Empty).Trim();
@@ -36,7 +47,7 @@ internal static class ShortcutDisplay
         var enabledLaunches = ShortcutLaunchNormalization.GetEnabledLaunches(shortcut);
         if (enabledLaunches.Count > 1)
         {
-            parts.Add(string.Join(" · ", enabledLaunches.Select(GetLaunchContextMenuTitle)));
+            parts.Add(string.Join(" · ", enabledLaunches.Select(launch => GetLaunchContextMenuTitle(launch, enabledLaunches))));
         }
         else if (enabledLaunches.Count == 1)
         {
@@ -79,6 +90,9 @@ internal static class ShortcutDisplay
 
         return path;
     }
+
+    private static bool AnyLaunchHasCommand(IEnumerable<WorkspaceEntry> launches) =>
+        launches.Any(launch => !string.IsNullOrWhiteSpace(CollapseToSingleLine(launch.Command)));
 
     private static string ShortenPath(string path) => ShortenPathForDisplay(path);
 

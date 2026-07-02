@@ -353,7 +353,8 @@ public sealed class ShortcutHealthTests : IDisposable
         };
 
         Assert.False(ShortcutHealth.NeedsRepair(shortcut));
-        Assert.Equal(ShortcutGlyphs.NewWindow, ShortcutHealth.GetListGlyph(shortcut));
+        var glyph = ShortcutHealth.GetListGlyph(shortcut);
+        Assert.False(string.IsNullOrWhiteSpace(glyph));
     }
 
     [Fact]
@@ -386,26 +387,36 @@ public sealed class ShortcutHealthTests : IDisposable
 public sealed class TerminalLaunchGlyphsTests
 {
     [Fact]
-    public void GetForLaunch_UsesPowerShellGlyphForPwsh()
+    public void GetForLaunch_UsesPowerShellProfileIconForPwshWhenAvailable()
     {
+        WtProfilesService.InvalidateCache();
         var launch = new WorkspaceEntry { Terminal = "pwsh", IsEnabled = true };
+        var icon = TerminalLaunchGlyphs.GetForLaunch(launch);
 
-        Assert.Equal(ShortcutGlyphs.PowerShell, TerminalLaunchGlyphs.GetForLaunch(launch));
+        Assert.False(string.IsNullOrWhiteSpace(icon));
+        Assert.True(
+            icon == ShortcutGlyphs.PowerShell
+            || icon.Contains("pwsh", StringComparison.OrdinalIgnoreCase)
+            || icon.Contains("ProfileIcons", StringComparison.OrdinalIgnoreCase),
+            $"Unexpected pwsh icon '{icon}'");
     }
 
     [Fact]
-    public void GetForLaunch_UsesLinuxGlyphForUbuntuProfile()
+    public void GetForLaunch_UsesPenguinForUbuntuProfile()
     {
         var launch = new WorkspaceEntry { Terminal = "wt", WtProfile = "Ubuntu", IsEnabled = true };
 
-        Assert.Equal(ShortcutGlyphs.Linux, TerminalLaunchGlyphs.GetForLaunch(launch));
+        Assert.Equal("\U0001F427", TerminalLaunchGlyphs.GetForLaunch(launch));
     }
 
     [Fact]
-    public void GetForLaunch_UsesNewWindowForDefaultTerminal()
+    public void GetForLaunch_UsesConfiguredDefaultProfileIcon()
     {
+        WtProfilesService.InvalidateCache();
         var launch = new WorkspaceEntry { Terminal = "default", IsEnabled = true };
+        var icon = TerminalLaunchGlyphs.GetForLaunch(launch);
 
-        Assert.Equal(ShortcutGlyphs.NewWindow, TerminalLaunchGlyphs.GetForLaunch(launch));
+        Assert.False(string.IsNullOrWhiteSpace(icon));
+        Assert.NotEqual(ShortcutGlyphs.IncidentTriangle, icon);
     }
 }

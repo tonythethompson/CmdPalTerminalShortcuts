@@ -13,6 +13,36 @@ internal static class TerminalLaunchGlyphs
 
     public static string GetForLaunch(WorkspaceEntry launch)
     {
+        if (TryGetProfileIcon(launch, out var profileIcon))
+        {
+            return profileIcon;
+        }
+
+        return GetFallbackGlyph(launch);
+    }
+
+    private static bool TryGetProfileIcon(WorkspaceEntry launch, out string icon)
+    {
+        icon = string.Empty;
+
+        var profile = TerminalProfileResolver.ResolveForLaunch(launch);
+        if (profile is null)
+        {
+            return false;
+        }
+
+        var resolved = TerminalProfileIconResolver.ResolveEffectiveIcon(profile);
+        if (string.IsNullOrWhiteSpace(resolved))
+        {
+            return false;
+        }
+
+        icon = resolved;
+        return true;
+    }
+
+    private static string GetFallbackGlyph(WorkspaceEntry launch)
+    {
         var terminal = (launch.Terminal ?? "default").Trim().ToLowerInvariant();
         if (IsLinuxTarget(terminal, launch.WtProfile))
         {

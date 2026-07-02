@@ -54,6 +54,31 @@ public sealed class ShortcutDisplayTests
     }
 
     [Fact]
+    public void GetLaunchContextMenuTitle_UsesOpenFolderOnlyWhenSiblingHasCommand()
+    {
+        var withCommand = new WorkspaceEntry
+        {
+            Id = "a",
+            Label = "Dev",
+            Command = "npm run dev",
+            IsEnabled = true,
+            Order = 0,
+        };
+        var folderOnly = new WorkspaceEntry
+        {
+            Id = "b",
+            Label = "Shell",
+            Command = string.Empty,
+            IsEnabled = true,
+            Order = 1,
+        };
+        var siblings = new[] { withCommand, folderOnly };
+
+        Assert.Equal("Open folder only", ShortcutDisplay.GetLaunchContextMenuTitle(folderOnly, siblings));
+        Assert.Equal("npm run dev", ShortcutDisplay.GetLaunchContextMenuTitle(withCommand, siblings));
+    }
+
+    [Fact]
     public void GetLaunchContextMenuTitle_UsesOpenFolderWhenCommandAndLabelBlank()
     {
         var entry = new WorkspaceEntry

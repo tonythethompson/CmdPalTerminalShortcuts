@@ -1,12 +1,11 @@
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Commands;
-using QuickShell.Models;
 using QuickShell.Services;
 
 namespace QuickShell.Pages;
 
-internal sealed partial class DiscoverGitReposPage : DynamicListPage
+internal partial class DiscoverGitReposPage : DynamicListPage
 {
     public const string PageId = "com.quickshell.discover-git-repos";
 
@@ -18,10 +17,11 @@ internal sealed partial class DiscoverGitReposPage : DynamicListPage
     {
         _onReload = onReload;
         Id = PageId;
-        Icon = new IconInfo("\uE8A5");
+        Icon = new IconInfo(ShortcutGlyphs.Discover);
         Title = "Discover git repos";
         Name = "Discover";
         PlaceholderText = "Filter discovered repositories...";
+        GitRepoIndex.Invalidate();
         RefreshItems(string.Empty);
     }
 
@@ -43,9 +43,9 @@ internal sealed partial class DiscoverGitReposPage : DynamicListPage
     {
         var extraRoots = GitRepoSearchRoots.FromShortcuts(QuickShellRuntimeServices.Shortcuts.GetShortcuts());
         var discovered = GitRepoIndex.GetAll(extraRoots).ToList();
-        var existingDirectories = QuickShellRuntimeServices.Shortcuts.GetShortcuts()
-            .Select(shortcut => shortcut.Directory)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var shortcuts = QuickShellRuntimeServices.Shortcuts.GetShortcuts();
+        var shortcutsByDirectory = DiscoverGitRepoListItems.GroupShortcutsByDirectory(shortcuts);
+        var settings = QuickShellRuntimeServices.Settings;
 
         if (!string.IsNullOrWhiteSpace(query))
         {
@@ -57,28 +57,9 @@ internal sealed partial class DiscoverGitReposPage : DynamicListPage
                 .ToList();
         }
 
-        var items = new List<IListItem>();
-        foreach (var candidate in discovered)
-        {
-            var alreadySaved = existingDirectories.Contains(candidate.Directory);
-            var subtitleParts = new List<string> { ShortcutDisplay.ShortenPathForDisplay(candidate.Directory) };
-            if (!string.IsNullOrWhiteSpace(candidate.RemoteUrl))
-            {
-                subtitleParts.Add(candidate.RemoteUrl);
-            }
-
-            if (alreadySaved)
-            {
-                subtitleParts.Add("already saved");
-            }
-
-            items.Add(new ListItem(new AddGitRepoWorkspaceCommand(candidate, _onReload))
-            {
-                Title = candidate.Name,
-                Subtitle = string.Join(" · ", subtitleParts),
-                Icon = new IconInfo(alreadySaved ? "\uE73E" : "\uE8A5"),
-            });
-        }
+        var items = DiscoverGitRepoListItems
+            .BuildSectionedItems(discovered, _onReload, shortcutsByDirectory, settings)
+            .ToList();
 
         if (items.Count == 0)
         {

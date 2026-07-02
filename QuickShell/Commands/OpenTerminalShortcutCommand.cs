@@ -63,11 +63,25 @@ internal sealed partial class OpenTerminalShortcutCommand : InvokableCommand
 
                 : "Run";
 
-        Icon = new IconInfo(
-            runAsAdmin || (shortcut.RunAsAdmin && !runAsStandard)
-                ? ShortcutGlyphs.AdminLaunch
-                : ShortcutHealth.GetListGlyph(shortcut));
+        Icon = new IconInfo(ResolveLaunchIcon(shortcut, runAsAdmin, runAsStandard));
 
+    }
+
+    private static string ResolveLaunchIcon(TerminalShortcut shortcut, bool runAsAdmin, bool runAsStandard)
+    {
+        if (runAsStandard)
+        {
+            return ShortcutHealth.NeedsRepair(shortcut)
+                ? ShortcutGlyphs.IncidentTriangle
+                : TerminalLaunchGlyphs.GetForShortcut(shortcut);
+        }
+
+        if (runAsAdmin || shortcut.RunAsAdmin)
+        {
+            return ShortcutGlyphs.AdminLaunch;
+        }
+
+        return ShortcutHealth.GetListGlyph(shortcut);
     }
 
 

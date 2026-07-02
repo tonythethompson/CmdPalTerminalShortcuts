@@ -28,7 +28,7 @@ internal static class WorkspaceContextCommands
             {
                 items.Add(new CommandContextItem(new OpenWorkspaceEntryCommand(workspace, entry, settings))
                 {
-                    Title = ShortcutDisplay.GetLaunchContextMenuTitle(entry),
+                    Title = ShortcutDisplay.GetLaunchContextMenuTitle(entry, enabledEntries),
                     Icon = new IconInfo(TerminalLaunchGlyphs.GetForLaunch(entry)),
                 });
             }

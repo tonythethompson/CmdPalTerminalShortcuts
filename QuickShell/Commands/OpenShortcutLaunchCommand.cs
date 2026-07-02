@@ -1,7 +1,6 @@
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using QuickShell.Models;
 using QuickShell.Services;
-using System.ComponentModel;
 
 namespace QuickShell.Commands;
 
@@ -48,35 +47,20 @@ internal sealed partial class OpenShortcutLaunchCommand : InvokableCommand
             return QuickShellNavigation.StayOpen("That launch entry was not found.");
         }
 
-        if (!ShortcutValidation.DirectoryExists(shortcut.Directory))
+        var result = ShortcutLaunchExecutor.LaunchEntry(
+            shortcut,
+            launch,
+            _settings.TerminalApplicationId,
+            _settings.DefaultProfileId,
+            new ShortcutLaunchOptions(_runAsAdmin, _runAsStandard, IncludeCompanionApp: false));
+
+        if (result.MarkUsed)
         {
-            return QuickShellNavigation.StayOpen(
-                $"Workspace could not launch: folder not found at {shortcut.Directory}.");
+            QuickShellRuntimeServices.Shortcuts.MarkUsed(_shortcutId);
         }
 
-        try
-        {
-            var launchShortcut = ShortcutLaunchNormalization.ToLaunchShortcut(launch, shortcut);
-            TerminalLauncher.Open(
-                launchShortcut,
-                _settings.TerminalApplicationId,
-                _settings.DefaultProfileId,
-                _runAsAdmin,
-                _runAsStandard);
-            QuickShellRuntimeServices.Shortcuts.MarkUsed(shortcut.Id);
-            return CommandResult.Dismiss();
-        }
-        catch (DirectoryNotFoundException)
-        {
-            return QuickShellNavigation.StayOpen("Failed to open terminal: the folder path could not be found.");
-        }
-        catch (InvalidOperationException)
-        {
-            return QuickShellNavigation.StayOpen("Failed to open terminal: check the workspace settings and try again.");
-        }
-        catch (Win32Exception)
-        {
-            return QuickShellNavigation.StayOpen("Failed to open terminal: launch was canceled or blocked by the system.");
-        }
+        return result.Dismiss
+            ? CommandResult.Dismiss()
+            : QuickShellNavigation.StayOpen(result.StayOpenMessage ?? "Launch failed.");
     }
 }

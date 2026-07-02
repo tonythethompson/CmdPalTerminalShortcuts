@@ -126,4 +126,28 @@ internal static class ShortcutDisplay
 
         return utc.ToLocalTime().ToString("MMM d", CultureInfo.InvariantCulture);
     }
+
+    public static string BuildLaunchEntrySubtitle(WorkspaceEntry entry)
+    {
+        var parts = new List<string>
+        {
+            TerminalCatalog.GetDisplayName(new TerminalShortcut
+            {
+                Terminal = entry.Terminal,
+                WtProfile = entry.WtProfile,
+            }),
+        };
+
+        if (!string.IsNullOrWhiteSpace(entry.Command))
+        {
+            parts.Add(entry.Command);
+        }
+
+        if (!entry.IsEnabled)
+        {
+            parts.Add("disabled");
+        }
+
+        return string.Join(" · ", parts);
+    }
 }

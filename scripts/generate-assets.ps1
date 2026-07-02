@@ -32,7 +32,7 @@ New-Item -ItemType Directory -Force -Path $runImagesDir | Out-Null
 
 
 
-dotnet build $generatorProject --no-incremental | Out-Null
+dotnet build $generatorProject | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "LogoAssetGenerator build failed with exit code $LASTEXITCODE"
 }

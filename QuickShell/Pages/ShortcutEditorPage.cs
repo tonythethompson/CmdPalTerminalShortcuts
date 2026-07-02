@@ -124,7 +124,7 @@ internal sealed partial class ShortcutEditorPage : DynamicListPage
             items.Add(new ListItem(new ShortcutLaunchFormPage(_shortcut, launch, ApplyShortcutChange))
             {
                 Title = launch.Label,
-                Subtitle = WorkspaceDisplay.BuildEntrySubtitle(launch),
+                Subtitle = ShortcutDisplay.BuildLaunchEntrySubtitle(launch),
                 Icon = new IconInfo(launch.IsEnabled ? TerminalLaunchGlyphs.GetForLaunch(launch) : "\uE7BA"),
                 MoreCommands = moreCommands.ToArray(),
             });

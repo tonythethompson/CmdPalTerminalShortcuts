@@ -57,6 +57,42 @@ public sealed class ShortcutLaunchNormalizationTests
     }
 
     [Fact]
+    public void MirrorLegacyFieldsFromFirstLaunch_UsesFirstEnabledEntry()
+    {
+        var shortcut = new TerminalShortcut
+        {
+            Name = "Multi",
+            Directory = @"C:\Projects\Multi",
+            Launches =
+            [
+                new WorkspaceEntry
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Label = "Disabled",
+                    Command = "old",
+                    Terminal = "cmd",
+                    IsEnabled = false,
+                    Order = 0,
+                },
+                new WorkspaceEntry
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Label = "Active",
+                    Command = "npm start",
+                    Terminal = "wt",
+                    IsEnabled = true,
+                    Order = 1,
+                },
+            ],
+        };
+
+        ShortcutLaunchNormalization.NormalizeShortcut(shortcut);
+
+        Assert.Equal("npm start", shortcut.Command);
+        Assert.Equal("wt", shortcut.Terminal);
+    }
+
+    [Fact]
     public void TryValidateLaunches_RejectsDuplicateLabels()
     {
         var shortcut = new TerminalShortcut

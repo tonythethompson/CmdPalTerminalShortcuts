@@ -39,7 +39,11 @@ internal static class ShortcutLaunchNormalization
             return;
         }
 
-        var first = shortcut.Launches.OrderBy(entry => entry.Order).First();
+        var first = shortcut.Launches
+            .Where(entry => entry.IsEnabled)
+            .OrderBy(entry => entry.Order)
+            .FirstOrDefault()
+            ?? shortcut.Launches.OrderBy(entry => entry.Order).First();
         shortcut.Command = first.Command;
         shortcut.Terminal = first.Terminal;
         shortcut.WtProfile = first.WtProfile;

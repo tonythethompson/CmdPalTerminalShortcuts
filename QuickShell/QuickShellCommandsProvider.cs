@@ -130,24 +130,6 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
             };
         }
 
-        if (string.Equals(id, WorkspaceEditorPage.PageId, StringComparison.Ordinal))
-        {
-            return new CommandItem(new WorkspaceEditorPage())
-            {
-                Title = "Edit workspace",
-                Icon = new IconInfo(WorkspaceListItems.WorkspaceIcon),
-            };
-        }
-
-        if (string.Equals(id, WorkspaceEntryFormPage.PageId, StringComparison.Ordinal))
-        {
-            return new CommandItem(new WorkspaceEntryFormPage())
-            {
-                Title = "Edit launch",
-                Icon = new IconInfo("\uE756"),
-            };
-        }
-
         if (ShortcutCommandIds.TryParseOpen(id, out var openKey))
         {
             var shortcut = QuickShellRuntimeServices.Shortcuts.ResolveForOpenCommand(openKey);

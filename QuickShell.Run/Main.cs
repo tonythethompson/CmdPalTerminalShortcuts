@@ -871,37 +871,22 @@ public class Main : IPlugin, IPluginI18n, IContextMenu, ISettingProvider, IReloa
 
 
     private void Launch(TerminalShortcut shortcut, bool runAsAdmin = false, bool runAsStandard = false)
-
     {
+        var result = ShortcutLaunchExecutor.Launch(
+            shortcut,
+            Settings!.TerminalApplicationId,
+            Settings.DefaultProfileId,
+            new ShortcutLaunchOptions(runAsAdmin, runAsStandard));
 
-        try
-
+        if (result.MarkUsed)
         {
-
-            TerminalLauncher.Open(
-
-                shortcut,
-
-                Settings.TerminalApplicationId,
-
-                Settings.DefaultProfileId,
-
-                runAsAdmin,
-
-                runAsStandard);
-
-            Shortcuts.MarkUsed(shortcut.Id);
-
+            Shortcuts!.MarkUsed(shortcut.Id);
         }
 
-        catch (Exception ex)
-
+        if (!result.Dismiss && !string.IsNullOrWhiteSpace(result.StayOpenMessage))
         {
-
-            _context?.API.ShowMsg("Quick Shell", ex.Message, string.Empty);
-
+            _context?.API.ShowMsg("Quick Shell", result.StayOpenMessage, string.Empty);
         }
-
     }
 
 

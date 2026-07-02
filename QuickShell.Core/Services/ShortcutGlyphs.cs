@@ -27,4 +27,6 @@ internal static class ShortcutGlyphs
     public const string Add = "\uE710";
 
     public const string Saved = "\uE73E";
+
+    public const string Workspace = "\uE8A7";
 }

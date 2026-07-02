@@ -153,7 +153,7 @@ internal sealed partial class OpenCompanionAppCommand : InvokableCommand
     }
 }
 
-internal sealed class OpenDiscoverGitReposCommand : DiscoverGitReposPage
+internal sealed partial class OpenDiscoverGitReposCommand : DiscoverGitReposPage
 {
     public OpenDiscoverGitReposCommand(Action onReload)
         : base(onReload)

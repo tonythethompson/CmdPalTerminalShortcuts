@@ -47,11 +47,29 @@ if ($LASTEXITCODE -ne 0) {
 
 
 
-# PowerToys Run plugin icons (same micro art; light theme uses the same asset on light rows).
+# PowerToys Run plugin icons: monochrome outlines (not the full-color MSIX logo).
+# Dark theme UI expects white strokes on transparent; light theme expects black.
 
-Copy-Item (Join-Path $assetsDir 'StoreLogo.png') (Join-Path $runImagesDir 'quickshell.dark.png') -Force
+$runDarkSvg = Join-Path $assetsDir 'logo-run.dark.svg'
+$runLightSvg = Join-Path $assetsDir 'logo-run.light.svg'
 
-Copy-Item (Join-Path $assetsDir 'StoreLogo.png') (Join-Path $runImagesDir 'quickshell.light.png') -Force
+if (-not (Test-Path $runDarkSvg)) {
+    throw "Missing Run dark icon source: $runDarkSvg"
+}
+
+if (-not (Test-Path $runLightSvg)) {
+    throw "Missing Run light icon source: $runLightSvg"
+}
+
+dotnet run --project $generatorProject --no-build -- --render $runDarkSvg (Join-Path $runImagesDir 'quickshell.dark.png') 50 50
+if ($LASTEXITCODE -ne 0) {
+    throw "LogoAssetGenerator Run dark icon failed with exit code $LASTEXITCODE"
+}
+
+dotnet run --project $generatorProject --no-build -- --render $runLightSvg (Join-Path $runImagesDir 'quickshell.light.png') 50 50
+if ($LASTEXITCODE -ne 0) {
+    throw "LogoAssetGenerator Run light icon failed with exit code $LASTEXITCODE"
+}
 
 
 

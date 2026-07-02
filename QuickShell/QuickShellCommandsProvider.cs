@@ -83,9 +83,7 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
 
     private void ReloadPages()
     {
-        GitRepoIndex.Invalidate();
         _page.Reload();
-        _settingsManager.RefreshSettingsContent();
         _fallbackPage.ClearResults();
     }
 
@@ -118,15 +116,6 @@ public partial class QuickShellCommandsProvider : CommandProvider, IDisposable
             {
                 Title = "Discover git repos",
                 Icon = new IconInfo(ShortcutGlyphs.Discover),
-            };
-        }
-
-        if (string.Equals(id, ShortcutLaunchFormPage.PageId, StringComparison.Ordinal))
-        {
-            return new CommandItem(new ShortcutLaunchFormPage())
-            {
-                Title = "Edit terminal",
-                Icon = new IconInfo("\uE756"),
             };
         }
 

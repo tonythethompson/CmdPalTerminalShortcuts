@@ -1,4 +1,4 @@
-# Devin context exclusions for QuickShell
+v# Devin context exclusions for QuickShell
 # Preserve solution/project files, application source, UI assets, tests, docs, manifests, and CI configuration.
 
 # Dependencies, package-manager stores, and external modules

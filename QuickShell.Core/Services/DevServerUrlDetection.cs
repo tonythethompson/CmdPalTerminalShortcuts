@@ -46,6 +46,81 @@ internal static partial class DevServerUrlDetection
         }
     }
 
+    public static string? TryDetectDevLaunchCommand(string directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return null;
+        }
+
+        var packageJsonPath = Path.Combine(directory, "package.json");
+        if (!File.Exists(packageJsonPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(packageJsonPath));
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            if (ReadScript(root, "dev") is null)
+            {
+                return null;
+            }
+
+            return FormatPackageScriptCommand(directory, "dev");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    internal static string FormatPackageScriptCommand(string directory, string scriptName)
+    {
+        return DetectPackageManager(directory) switch
+        {
+            PackageManagerKind.Pnpm => $"pnpm {scriptName}",
+            PackageManagerKind.Yarn => $"yarn {scriptName}",
+            PackageManagerKind.Bun => $"bun run {scriptName}",
+            _ => $"npm run {scriptName}",
+        };
+    }
+
+    private enum PackageManagerKind
+    {
+        Npm,
+        Pnpm,
+        Yarn,
+        Bun,
+    }
+
+    private static PackageManagerKind DetectPackageManager(string directory)
+    {
+        if (File.Exists(Path.Combine(directory, "pnpm-lock.yaml")))
+        {
+            return PackageManagerKind.Pnpm;
+        }
+
+        if (File.Exists(Path.Combine(directory, "bun.lockb"))
+            || File.Exists(Path.Combine(directory, "bun.lock")))
+        {
+            return PackageManagerKind.Bun;
+        }
+
+        if (File.Exists(Path.Combine(directory, "yarn.lock")))
+        {
+            return PackageManagerKind.Yarn;
+        }
+
+        return PackageManagerKind.Npm;
+    }
+
     private static string? ReadScript(JsonElement root, string scriptName)
     {
         if (!root.TryGetProperty("scripts", out var scripts) || scripts.ValueKind != JsonValueKind.Object)

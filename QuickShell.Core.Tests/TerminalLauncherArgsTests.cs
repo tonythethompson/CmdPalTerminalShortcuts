@@ -1,0 +1,69 @@
+using QuickShell.Models;
+using QuickShell.Services;
+
+namespace QuickShell.Core.Tests;
+
+public sealed class TerminalLauncherArgsTests
+{
+    [Fact]
+    public void EscapeCmd_DoublesEmbeddedQuotes()
+    {
+        Assert.Equal(@"foo""""bar", TerminalLauncherArgs.EscapeCmd(@"foo""bar"));
+    }
+
+    [Fact]
+    public void EscapeSingleQuotedPowerShell_DoublesSingleQuotes()
+    {
+        Assert.Equal("C:\\Users\\o''malley", TerminalLauncherArgs.EscapeSingleQuotedPowerShell(@"C:\Users\o'malley"));
+    }
+
+    [Fact]
+    public void ToPowerShellArguments_IncludesSetLocationAndCommand()
+    {
+        var shortcut = new TerminalShortcut { Command = "npm start" };
+        var args = TerminalLauncherArgs.ToPowerShellArguments(shortcut, @"C:\Projects\App");
+
+        Assert.Contains("-NoExit", args, StringComparison.Ordinal);
+        Assert.Contains(@"C:\Projects\App", args, StringComparison.Ordinal);
+        Assert.Contains("npm start", args, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildCmdArguments_QuotesDirectoryWithSpaces()
+    {
+        var shortcut = new TerminalShortcut
+        {
+            Directory = @"C:\My Projects\App",
+            Command = "dir",
+        };
+
+        var args = TerminalLauncherArgs.BuildCmdArguments(shortcut);
+
+        Assert.Contains(@"C:\My Projects\App", args, StringComparison.Ordinal);
+        Assert.Contains("dir", args, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ToWslArguments_IncludesDistroCdAndCommand()
+    {
+        var shortcut = new TerminalShortcut { Command = "ls -la" };
+        var target = new LaunchTarget
+        {
+            Id = "wsl:Ubuntu",
+            DisplayName = "Ubuntu",
+            Kind = LaunchTargetKind.Wsl,
+            ProfileOrDistro = "Ubuntu",
+        };
+        var location = new WslPathResolver.WslLocation
+        {
+            LinuxPath = "/home/user/project",
+            Distro = "Ubuntu",
+        };
+
+        var args = TerminalLauncherArgs.ToWslArguments(shortcut, target, location);
+
+        Assert.Contains("-d \"Ubuntu\"", args, StringComparison.Ordinal);
+        Assert.Contains("/home/user/project", args, StringComparison.Ordinal);
+        Assert.Contains("bash -lc", args, StringComparison.Ordinal);
+    }
+}

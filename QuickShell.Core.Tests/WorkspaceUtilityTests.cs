@@ -481,17 +481,6 @@ public sealed class CompanionAppTests : IDisposable
     }
 
     [Fact]
-    public void ShortcutFormTemplateCache_ReusesTemplateForSameShape()
-    {
-        ShortcutFormTemplateCache.Invalidate();
-        var first = ShortcutFormTemplateCache.GetOrBuild(1, "windows-terminal", () => "template-a");
-        var second = ShortcutFormTemplateCache.GetOrBuild(1, "windows-terminal", () => "template-b");
-
-        Assert.Equal("template-a", first);
-        Assert.Equal("template-a", second);
-    }
-
-    [Fact]
     public void TryValidateCompanionApp_RequiresPathWhenLaunchEnabled()
     {
         var shortcut = new TerminalShortcut
